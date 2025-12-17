@@ -1,0 +1,681 @@
+import React, { useState, useRef, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useCamera } from '../../hooks/useCamera'
+import { CAMERA_MODES, RECOGNITION_MODES } from '../../constants'
+import {
+  Camera,
+  Video,
+  Scan,
+  User,
+  Users,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  Maximize2,
+  Minimize2,
+  Settings,
+  Zap,
+  ZapOff,
+  AlertCircle
+} from 'lucide-react'
+import toast from 'react-hot-toast'
+
+const CameraCapture = ({
+  onCapture,
+  onClose,
+  mode = CAMERA_MODES.PHOTO,
+  recognitionMode = RECOGNITION_MODES.ONLINE,
+  showPreview = true,
+  maxFaces = 10,
+  className = '',
+  autoCapture = false,
+  captureInterval = 2000
+}) => {
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [detectedFaces, setDetectedFaces] = useState([])
+  const [recognitionResults, setRecognitionResults] = useState([])
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [cameraSettings, setCameraSettings] = useState({
+    facingMode: 'user',
+    quality: 0.8,
+    flash: false,
+    grid: true,
+    countdown: 3
+  })
+
+  const videoContainerRef = useRef(null)
+  const captureIntervalRef = useRef(null)
+
+  const {
+    videoRef,
+    canvasRef,
+    isActive,
+    isRecording,
+    capturedImages,
+    error,
+    permission,
+    startCamera,
+    stopCamera,
+    capturePhoto,
+    startRecording,
+    stopRecording,
+    switchCamera,
+    clearCapturedImages,
+    getCameraDevices,
+    setCameraDevice
+  } = useCamera({
+    mode,
+    facingMode: cameraSettings.facingMode,
+    quality: cameraSettings.quality
+  })
+
+  // Initialize camera
+  useEffect(() => {
+    const initCamera = async () => {
+      await startCamera()
+    }
+    
+    initCamera()
+    
+    return () => {
+      stopCamera()
+      if (captureIntervalRef.current) {
+        clearInterval(captureIntervalRef.current)
+      }
+    }
+  }, [])
+
+  // Auto capture for scan mode
+  useEffect(() => {
+    if (mode === CAMERA_MODES.SCAN && autoCapture && isActive) {
+      captureIntervalRef.current = setInterval(async () => {
+        const image = await capturePhoto()
+        if (image) {
+          processImage(image)
+        }
+      }, captureInterval)
+    }
+    
+    return () => {
+      if (captureIntervalRef.current) {
+        clearInterval(captureIntervalRef.current)
+      }
+    }
+  }, [mode, autoCapture, isActive, captureInterval])
+
+  // Process captured image for face detection
+  const processImage = async (imageData) => {
+    setIsProcessing(true)
+    
+    try {
+      // Simulate face detection and recognition
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Mock face detection results
+      const mockFaces = Array.from({ length: Math.min(3, maxFaces) }, (_, i) => ({
+        id: i + 1,
+        x: 100 + i * 150,
+        y: 100 + i * 20,
+        width: 120 + Math.random() * 30,
+        height: 120 + Math.random() * 30,
+        confidence: 0.7 + Math.random() * 0.3,
+        studentId: `STU${100 + i}`,
+        name: `Student ${i + 1}`,
+        status: Math.random() > 0.3 ? 'recognized' : 'unknown'
+      }))
+      
+      setDetectedFaces(mockFaces)
+      
+      // Filter recognized faces
+      const recognized = mockFaces.filter(face => face.status === 'recognized')
+      setRecognitionResults(recognized)
+      
+      if (recognized.length > 0 && onCapture) {
+        onCapture({
+          image: imageData,
+          faces: recognized,
+          mode: recognitionMode,
+          timestamp: Date.now()
+        })
+        
+        toast.success(`Recognized ${recognized.length} student(s)`)
+      }
+      
+    } catch (error) {
+      toast.error('Face detection failed')
+      console.error('Processing error:', error)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleCapture = async () => {
+    if (!isActive) {
+      toast.error('Camera not ready')
+      return
+    }
+    
+    if (mode === CAMERA_MODES.VIDEO && !isRecording) {
+      startRecording()
+      return
+    }
+    
+    if (mode === CAMERA_MODES.VIDEO && isRecording) {
+      stopRecording()
+      return
+    }
+    
+    // Handle photo capture
+    if (cameraSettings.countdown > 0) {
+      startCountdown()
+    } else {
+      captureAndProcess()
+    }
+  }
+
+  const captureAndProcess = async () => {
+    const image = await capturePhoto()
+    if (image) {
+      processImage(image)
+    }
+  }
+
+  const startCountdown = () => {
+    let count = cameraSettings.countdown
+    
+    const countdownInterval = setInterval(() => {
+      if (count > 0) {
+        toast(`${count}...`, { icon: '⏱️', duration: 1000 })
+        count--
+      } else {
+        clearInterval(countdownInterval)
+        captureAndProcess()
+      }
+    }, 1000)
+  }
+
+  const toggleFullscreen = () => {
+    if (!videoContainerRef.current) return
+    
+    if (!isFullscreen) {
+      if (videoContainerRef.current.requestFullscreen) {
+        videoContainerRef.current.requestFullscreen()
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen()
+      }
+    }
+    
+    setIsFullscreen(!isFullscreen)
+  }
+
+  const handleFaceSelect = (face) => {
+    setRecognitionResults(prev => {
+      const exists = prev.find(f => f.id === face.id)
+      if (exists) {
+        return prev.filter(f => f.id !== face.id)
+      } else {
+        return [...prev, face]
+      }
+    })
+  }
+
+  const toggleFlash = () => {
+    setCameraSettings(prev => ({
+      ...prev,
+      flash: !prev.flash
+    }))
+    toast(cameraSettings.flash ? 'Flash off' : 'Flash on', { icon: '⚡' })
+  }
+
+  const toggleGrid = () => {
+    setCameraSettings(prev => ({
+      ...prev,
+      grid: !prev.grid
+    }))
+  }
+
+  const handleModeChange = (newMode) => {
+    if (newMode === mode) return
+    
+    if (newMode === CAMERA_MODES.VIDEO) {
+      toast('Switching to video mode', { icon: '🎥' })
+    } else if (newMode === CAMERA_MODES.SCAN) {
+      toast('Switching to scan mode', { icon: '🔍' })
+    } else {
+      toast('Switching to photo mode', { icon: '📸' })
+    }
+    
+    // Update mode logic would go here
+  }
+
+  const getCameraModeIcon = () => {
+    switch (mode) {
+      case CAMERA_MODES.VIDEO:
+        return <Video size={20} />
+      case CAMERA_MODES.SCAN:
+        return <Scan size={20} />
+      default:
+        return <Camera size={20} />
+    }
+  }
+
+  const getRecognitionModeIcon = () => {
+    switch (recognitionMode) {
+      case RECOGNITION_MODES.OFFLINE:
+        return <ZapOff size={20} />
+      case RECOGNITION_MODES.HYBRID:
+        return <RefreshCw size={20} />
+      default:
+        return <Zap size={20} />
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className={`relative rounded-2xl overflow-hidden bg-gray-900 ${className}`}
+      ref={videoContainerRef}
+    >
+      {/* Camera View */}
+      <div className="relative aspect-video bg-black">
+        {!isActive ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-20 h-20 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-4">
+                <Camera size={32} className="text-gray-400" />
+              </div>
+              <p className="text-gray-400">
+                {permission === 'denied' 
+                  ? 'Camera permission denied'
+                  : 'Initializing camera...'
+                }
+              </p>
+              {permission === 'denied' && (
+                <button
+                  onClick={startCamera}
+                  className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  Grant Permission
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Video Feed */}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover"
+            />
+            
+            {/* Camera Grid */}
+            {cameraSettings.grid && (
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="grid grid-cols-3 grid-rows-3 h-full">
+                  {[...Array(9)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="border border-white/20"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Face Detection Overlay */}
+            <div className="absolute inset-0">
+              {detectedFaces.map((face) => (
+                <motion.div
+                  key={face.id}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className={`absolute border-2 rounded-lg cursor-pointer ${
+                    face.status === 'recognized'
+                      ? 'border-green-500 bg-green-500/10'
+                      : 'border-yellow-500 bg-yellow-500/10'
+                  }`}
+                  style={{
+                    left: `${face.x}px`,
+                    top: `${face.y}px`,
+                    width: `${face.width}px`,
+                    height: `${face.height}px`
+                  }}
+                  onClick={() => handleFaceSelect(face)}
+                >
+                  {/* Face Label */}
+                  <div className={`absolute -top-6 left-0 px-2 py-1 rounded-md text-xs font-semibold ${
+                    face.status === 'recognized'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-yellow-500 text-white'
+                  }`}>
+                    {face.status === 'recognized' ? face.name : 'Unknown'}
+                  </div>
+                  
+                  {/* Confidence Indicator */}
+                  <div className="absolute -bottom-6 left-0 text-xs">
+                    {Math.round(face.confidence * 100)}%
+                  </div>
+                  
+                  {/* Selection Indicator */}
+                  {recognitionResults.find(f => f.id === face.id) && (
+                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                      <CheckCircle size={14} className="text-white" />
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </>
+        )}
+        
+        {/* Flash Effect */}
+        {cameraSettings.flash && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 bg-white"
+          />
+        )}
+        
+        {/* Processing Overlay */}
+        {isProcessing && (
+          <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full border-4 border-primary-500 border-t-transparent animate-spin mx-auto mb-4" />
+              <p className="text-white">Processing image...</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Camera Controls */}
+      <div className="p-4 bg-gradient-to-t from-black/90 to-transparent">
+        <div className="flex items-center justify-between mb-4">
+          {/* Left Controls */}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={toggleFlash}
+              className={`p-3 rounded-full ${
+                cameraSettings.flash 
+                  ? 'bg-yellow-500 text-white' 
+                  : 'bg-white/20 text-white hover:bg-white/30'
+              } transition-colors`}
+              aria-label="Toggle flash"
+            >
+              <Zap size={20} />
+            </button>
+            
+            <button
+              onClick={switchCamera}
+              className="p-3 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+              aria-label="Switch camera"
+            >
+              <RefreshCw size={20} />
+            </button>
+            
+            <button
+              onClick={toggleGrid}
+              className={`p-3 rounded-full ${
+                cameraSettings.grid 
+                  ? 'bg-primary-500 text-white' 
+                  : 'bg-white/20 text-white hover:bg-white/30'
+              } transition-colors`}
+              aria-label="Toggle grid"
+            >
+              <div className="w-5 h-5 grid grid-cols-2 grid-rows-2 gap-0.5">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="border border-current" />
+                ))}
+              </div>
+            </button>
+          </div>
+
+          {/* Center - Capture Button */}
+          <div className="flex-1 flex justify-center">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleCapture}
+              className={`w-16 h-16 rounded-full ${
+                mode === CAMERA_MODES.VIDEO && isRecording
+                  ? 'bg-red-500 hover:bg-red-600'
+                  : 'bg-white hover:bg-gray-100'
+              } flex items-center justify-center shadow-2xl`}
+              aria-label={mode === CAMERA_MODES.VIDEO 
+                ? (isRecording ? 'Stop recording' : 'Start recording') 
+                : 'Capture photo'
+              }
+            >
+              {mode === CAMERA_MODES.VIDEO && isRecording ? (
+                <div className="w-6 h-6 bg-white rounded-sm" />
+              ) : (
+                <div className={`w-8 h-8 rounded-full ${
+                  mode === CAMERA_MODES.VIDEO ? 'bg-red-500' : 'bg-gray-900'
+                }`} />
+              )}
+            </motion.button>
+          </div>
+
+          {/* Right Controls */}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={toggleFullscreen}
+              className="p-3 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+              aria-label="Toggle fullscreen"
+            >
+              {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+            </button>
+            
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-3 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+              aria-label="Settings"
+            >
+              <Settings size={20} />
+            </button>
+            
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-3 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+                aria-label="Close camera"
+              >
+                <XCircle size={20} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Mode Selector */}
+        <div className="flex justify-center space-x-4 mb-4">
+          {Object.values(CAMERA_MODES).map((camMode) => (
+            <button
+              key={camMode}
+              onClick={() => handleModeChange(camMode)}
+              className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 ${
+                mode === camMode
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              } transition-colors`}
+            >
+              {camMode === CAMERA_MODES.VIDEO && <Video size={16} />}
+              {camMode === CAMERA_MODES.SCAN && <Scan size={16} />}
+              {camMode === CAMERA_MODES.PHOTO && <Camera size={16} />}
+              <span className="capitalize">{camMode}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Recognition Mode */}
+        <div className="flex justify-center">
+          <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-gray-800/50 backdrop-blur-sm">
+            {getRecognitionModeIcon()}
+            <span className="text-sm text-white capitalize">
+              {recognitionMode} Mode
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Settings Panel */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="absolute bottom-20 left-4 right-4 bg-gray-800/90 backdrop-blur-lg rounded-xl p-4"
+          >
+            <h4 className="text-white font-semibold mb-3">Camera Settings</h4>
+            
+            <div className="space-y-4">
+              {/* Facing Mode */}
+              <div>
+                <label className="text-sm text-gray-300 mb-1 block">Camera</label>
+                <select
+                  value={cameraSettings.facingMode}
+                  onChange={(e) => setCameraSettings(prev => ({
+                    ...prev,
+                    facingMode: e.target.value
+                  }))}
+                  className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
+                >
+                  <option value="user">Front Camera</option>
+                  <option value="environment">Rear Camera</option>
+                </select>
+              </div>
+              
+              {/* Quality */}
+              <div>
+                <label className="text-sm text-gray-300 mb-1 block">
+                  Quality: {cameraSettings.quality * 100}%
+                </label>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="1"
+                  step="0.1"
+                  value={cameraSettings.quality}
+                  onChange={(e) => setCameraSettings(prev => ({
+                    ...prev,
+                    quality: parseFloat(e.target.value)
+                  }))}
+                  className="w-full"
+                />
+              </div>
+              
+              {/* Countdown */}
+              <div>
+                <label className="text-sm text-gray-300 mb-1 block">
+                  Countdown: {cameraSettings.countdown}s
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="1"
+                  value={cameraSettings.countdown}
+                  onChange={(e) => setCameraSettings(prev => ({
+                    ...prev,
+                    countdown: parseInt(e.target.value)
+                  }))}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Preview Panel */}
+      {showPreview && capturedImages.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-4 right-4 bg-gray-800/90 backdrop-blur-lg rounded-xl p-3"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-white text-sm font-semibold">Preview</h4>
+            <button
+              onClick={clearCapturedImages}
+              className="text-xs text-gray-400 hover:text-white"
+            >
+              Clear
+            </button>
+          </div>
+          
+          <div className="flex space-x-2 overflow-x-auto max-w-xs">
+            {capturedImages.map((img, index) => (
+              <div
+                key={index}
+                className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0"
+              >
+                <img
+                  src={img.url}
+                  alt={`Capture ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Recognition Results */}
+      {recognitionResults.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-4 left-4 bg-gray-800/90 backdrop-blur-lg rounded-xl p-3 max-w-xs"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-white text-sm font-semibold flex items-center">
+              <Users size={16} className="mr-2" />
+              Recognized: {recognitionResults.length}
+            </h4>
+            <button
+              onClick={() => setRecognitionResults([])}
+              className="text-xs text-gray-400 hover:text-white"
+            >
+              Clear
+            </button>
+          </div>
+          
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {recognitionResults.map((student) => (
+              <div
+                key={student.id}
+                className="flex items-center space-x-2 p-2 bg-gray-700/50 rounded-lg"
+              >
+                <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center">
+                  <User size={14} className="text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white truncate">{student.name}</p>
+                  <p className="text-xs text-gray-400">ID: {student.studentId}</p>
+                </div>
+                <div className="text-xs bg-green-500 text-white px-2 py-1 rounded-full">
+                  {Math.round(student.confidence * 100)}%
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Canvas for image capture (hidden) */}
+      <canvas ref={canvasRef} className="hidden" />
+    </motion.div>
+  )
+}
+
+export default CameraCapture

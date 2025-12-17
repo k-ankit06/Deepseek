@@ -1,0 +1,30 @@
+{
+    "name": "automated-attendance-system",
+    "version": "1.0.0",
+    "description": "AI/ML-based Automated Student Attendance System for Rural Schools",
+    "scripts": {
+        "start": "powershell -ExecutionPolicy Bypass -File ./start-all.ps1",
+        "start:frontend": "cd frontend && npm run dev",
+        "start:backend": "cd backend && npm run dev",
+        "start:aiml": "cd ai-ml && .\\venv\\Scripts\\activate && python api/app.py",
+        "install:all": "npm run install:frontend && npm run install:backend && npm run install:aiml",
+        "install:frontend": "cd frontend && npm install",
+        "install:backend": "cd backend && npm install",
+        "install:aiml": "cd ai-ml && pip install -r requirements.txt",
+        "build:frontend": "cd frontend && npm run build"
+    },
+    "keywords": [
+        "attendance",
+        "face-recognition",
+        "ai",
+        "ml",
+        "rural-school",
+        "education"
+    ],
+    "author": "Your Name",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yourusername/automated-attendance-system"
+    }
+}
