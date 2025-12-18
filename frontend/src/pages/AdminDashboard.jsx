@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Shield, 
-  Users, 
-  BookOpen, 
-  TrendingUp, 
+import {
+  Shield,
+  Users,
+  BookOpen,
+  TrendingUp,
   Calendar,
   Activity,
   Bell,
@@ -17,8 +18,10 @@ import {
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { useAuth } from '../components/auth/ProtectedRoute';
+import { apiMethods } from '../utils/api';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [stats, setStats] = useState({
     totalStudents: 0,
@@ -31,58 +34,99 @@ const AdminDashboard = () => {
 
   const [recentActivity, setRecentActivity] = useState([]);
   const [attendanceData, setAttendanceData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize stats
+  // Fetch real stats from API
   useEffect(() => {
-    // Mock data initialization
-    setStats({
-      totalStudents: 256,
-      totalTeachers: 8,
-      totalClasses: 12,
-      todayAttendance: 94,
-      pendingTasks: 3,
-      monthlyAverage: 92
-    });
+    const fetchStats = async () => {
+      setIsLoading(true);
 
-    setRecentActivity([
-      { id: 1, time: '10:30 AM', activity: 'Class 3 attendance marked', user: 'Teacher Priya', type: 'success' },
-      { id: 2, time: '9:45 AM', activity: '2 new students registered', user: 'Teacher Raj', type: 'info' },
-      { id: 3, time: 'Yesterday', activity: 'Monthly report generated', user: 'System', type: 'success' },
-      { id: 4, time: 'Jan 19', activity: 'System maintenance completed', user: 'Admin', type: 'warning' },
-    ]);
+      let studentCount = 0;
+      let classCount = 0;
+      let teacherCount = 0;
 
-    // Mock attendance data for chart
-    const weeklyData = [85, 88, 90, 92, 94, 95, 93];
-    setAttendanceData(weeklyData);
+      try {
+        // Fetch students count
+        const studentsRes = await apiMethods.getStudents();
+        studentCount = studentsRes?.data?.students?.length || studentsRes?.data?.length || 0;
+      } catch (e) {
+        console.log('Could not fetch students');
+      }
+
+      try {
+        // Fetch classes count
+        const classesRes = await apiMethods.getClasses();
+        classCount = classesRes?.data?.length || 0;
+      } catch (e) {
+        console.log('Could not fetch classes');
+      }
+
+      try {
+        // Fetch teachers count
+        const usersRes = await apiMethods.getUsers();
+        teacherCount = usersRes?.data?.filter(u => u.role === 'teacher')?.length || 0;
+      } catch (e) {
+        console.log('Could not fetch users');
+      }
+
+      setStats({
+        totalStudents: studentCount,
+        totalTeachers: teacherCount,
+        totalClasses: classCount,
+        todayAttendance: 0,
+        pendingTasks: 0,
+        monthlyAverage: 0
+      });
+
+      setRecentActivity([]);
+      setAttendanceData([]);
+      setIsLoading(false);
+    };
+
+    fetchStats();
   }, []);
 
   const adminQuickActions = [
     {
-      title: 'School Setup',
-      description: 'Configure school profile and settings',
-      icon: Settings,
+      title: 'Register Student',
+      description: 'Add new student with face capture',
+      icon: Users,
       color: 'from-blue-500 to-cyan-500',
-      path: '/admin/school'
+      path: '/student-registration'
     },
     {
       title: 'Manage Teachers',
       description: 'Add, edit, or remove teacher accounts',
       icon: Users,
       color: 'from-green-500 to-emerald-500',
-      path: '/admin/teachers'
+      path: '/teachers'
     },
     {
       title: 'Class Management',
-      description: 'Create and organize classes',
+      description: 'Create classes and sections',
       icon: BookOpen,
       color: 'from-purple-500 to-pink-500',
-      path: '/admin/classes'
+      path: '/classes'
+    },
+    {
+      title: 'School Setup',
+      description: 'Configure school profile',
+      icon: Settings,
+      color: 'from-orange-500 to-amber-500',
+      path: '/school-setup'
+    },
+    {
+      title: 'View Students',
+      description: 'View and manage all students',
+      icon: Eye,
+      color: 'from-pink-500 to-rose-500',
+      path: '/students'
     },
     {
       title: 'View Reports',
       description: 'Generate and export reports',
       icon: Download,
-      color: 'from-orange-500 to-amber-500',
+      color: 'from-indigo-500 to-purple-500',
       path: '/reports'
     }
   ];
@@ -115,7 +159,7 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
@@ -156,9 +200,8 @@ const AdminDashboard = () => {
                 <div className={`p-3 rounded-xl bg-${stat.color}-100`}>
                   <stat.icon className={`text-${stat.color}-600`} size={22} />
                 </div>
-                <span className={`text-sm font-medium ${
-                  stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
-                }`}>
+                <span className={`text-sm font-medium ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                  }`}>
                   {stat.change}
                 </span>
               </div>
@@ -186,7 +229,7 @@ const AdminDashboard = () => {
                   whileHover={{ y: -4 }}
                   whileTap={{ scale: 0.98 }}
                   className={`bg-gradient-to-br ${action.color} rounded-2xl p-5 text-white cursor-pointer shadow-lg hover:shadow-xl transition-all`}
-                  onClick={() => window.location.href = action.path}
+                  onClick={() => navigate(action.path)}
                 >
                   <div className="flex items-center mb-3">
                     <action.icon size={24} />
@@ -216,19 +259,18 @@ const AdminDashboard = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.location.href = '/admin/activity'}
+                onClick={() => navigate('/reports')}
               >
                 View All
               </Button>
             </div>
-            
+
             <div className="space-y-4">
               {recentActivity.map((activity) => (
                 <div key={activity.id} className="flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className={`p-2 rounded-lg mr-3 ${
-                    activity.type === 'success' ? 'bg-green-100' :
+                  <div className={`p-2 rounded-lg mr-3 ${activity.type === 'success' ? 'bg-green-100' :
                     activity.type === 'warning' ? 'bg-yellow-100' : 'bg-blue-100'
-                  }`}>
+                    }`}>
                     {activity.type === 'success' ? (
                       <CheckCircle size={16} className="text-green-600" />
                     ) : (
@@ -327,9 +369,8 @@ const AdminDashboard = () => {
                   <div className="font-medium">{item.task}</div>
                   <div className="text-sm text-gray-600">{item.date}</div>
                 </div>
-                <span className={`px-2 py-1 rounded text-xs ${
-                  item.priority === 'High' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-                }`}>
+                <span className={`px-2 py-1 rounded text-xs ${item.priority === 'High' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
                   {item.priority}
                 </span>
               </div>
@@ -358,7 +399,7 @@ const AdminDashboard = () => {
               variant="outline"
               icon={Eye}
               className="w-full mt-2"
-              onClick={() => window.location.href = '/admin/analytics'}
+              onClick={() => navigate('/reports')}
             >
               View Detailed Analytics
             </Button>

@@ -39,32 +39,19 @@ const LoginPage = () => {
         avatar: '👨‍🏫'
       };
 
+      // Save to localStorage first
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('token', 'demo_token_123');
 
-      // Show success message first
-      alert(`Welcome ${userData.name}! Login successful.`);
-
-      // Navigate based on role
+      // Use window.location for reliable redirect
       if (userType === 'admin') {
-        navigate('/admin');
+        window.location.href = '/admin';
       } else {
-        navigate('/teacher');
+        window.location.href = '/teacher';
       }
     } else {
       alert('Please enter email and password');
     }
-  };
-
-  // Demo credentials for quick login
-  const demoCredentials = {
-    admin: { email: 'admin@school.com', password: 'admin123' },
-    teacher: { email: 'teacher@school.com', password: 'teacher123' }
-  };
-
-  const quickLogin = (type) => {
-    setUserType(type);
-    setCredentials(demoCredentials[type]);
   };
 
   return (
@@ -120,8 +107,8 @@ const LoginPage = () => {
                 <button
                   onClick={() => setUserType('teacher')}
                   className={`flex-1 p-4 rounded-xl border-2 flex flex-col items-center transition-all ${userType === 'teacher'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                    : 'border-gray-200 text-gray-700 hover:border-gray-300'
                     }`}
                 >
                   <Users size={24} className="mb-2" />
@@ -130,36 +117,13 @@ const LoginPage = () => {
                 <button
                   onClick={() => setUserType('admin')}
                   className={`flex-1 p-4 rounded-xl border-2 flex flex-col items-center transition-all ${userType === 'admin'
-                      ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-md'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                    ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-md'
+                    : 'border-gray-200 text-gray-700 hover:border-gray-300'
                     }`}
                 >
                   <School size={24} className="mb-2" />
                   <span className="font-medium">Admin</span>
                 </button>
-              </div>
-
-              {/* Quick Login Buttons */}
-              <div className="mb-6">
-                <p className="text-sm text-gray-600 mb-2">Quick Login (Demo):</p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => quickLogin('teacher')}
-                    className="flex-1"
-                  >
-                    Demo Teacher
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => quickLogin('admin')}
-                    className="flex-1"
-                  >
-                    Demo Admin
-                  </Button>
-                </div>
               </div>
 
               {/* Login Form */}
@@ -233,15 +197,18 @@ const LoginPage = () => {
 
               {/* Footer */}
               <div className="mt-6 pt-6 border-t text-center">
-                <p className="text-sm text-gray-600">
-                  Don't have an account?{' '}
+                <p className="text-sm text-gray-600 mb-3">
+                  New school?{' '}
                   <button
                     type="button"
-                    onClick={() => navigate('/register')}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
+                    onClick={() => navigate('/signup')}
+                    className="text-blue-600 hover:text-blue-800 font-semibold"
                   >
-                    Contact School Admin
+                    Register Your School
                   </button>
+                </p>
+                <p className="text-xs text-gray-500">
+                  Teachers: Contact your school admin for account access
                 </p>
               </div>
             </Card>

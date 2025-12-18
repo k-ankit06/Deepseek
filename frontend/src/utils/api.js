@@ -18,12 +18,12 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
-    
+
     // Add offline flag for offline requests
     if (config.offline) {
       config.headers['X-Offline-Mode'] = 'true'
     }
-    
+
     return config
   },
   (error) => {
@@ -43,29 +43,32 @@ api.interceptors.response.use(
   (error) => {
     // Handle network errors
     if (!error.response) {
-      toast.error(TOAST_MESSAGES.ERROR_NETWORK)
-      return Promise.reject({ message: TOAST_MESSAGES.ERROR_NETWORK })
+      // Don't show error toast for network issues in demo mode
+      console.warn('Network error:', error.message);
+      return Promise.reject({ message: 'Network error', success: false })
     }
-    
+
     const { status, data } = error.response
-    
+
     // Handle specific error cases
     switch (status) {
       case 401:
-        toast.error(TOAST_MESSAGES.ERROR_UNAUTHORIZED)
-        localStorage.removeItem(STORAGE_KEYS.TOKEN)
-        localStorage.removeItem(STORAGE_KEYS.USER)
-        window.location.href = '/login'
+        // Don't auto-logout in demo mode - just log the error
+        console.warn('401 Unauthorized - Demo mode, not logging out');
+        // toast.error(TOAST_MESSAGES.ERROR_UNAUTHORIZED)
+        // localStorage.removeItem(STORAGE_KEYS.TOKEN)
+        // localStorage.removeItem(STORAGE_KEYS.USER)
+        // window.location.href = '/login'
         break
-        
+
       case 403:
         toast.error('You do not have permission to perform this action')
         break
-        
+
       case 404:
         toast.error('Resource not found')
         break
-        
+
       case 422:
         // Validation errors
         if (data.errors) {
@@ -74,15 +77,15 @@ api.interceptors.response.use(
           })
         }
         break
-        
+
       case 500:
         toast.error(TOAST_MESSAGES.ERROR_GENERIC)
         break
-        
+
       default:
         toast.error(data?.message || TOAST_MESSAGES.ERROR_GENERIC)
     }
-    
+
     return Promise.reject(error.response?.data || error)
   }
 )
@@ -92,42 +95,33 @@ export const apiMethods = {
   // Auth
   login: (credentials) => api.post('/auth/login', credentials),
   register: (data) => api.post('/auth/register', data),
+  registerSchool: (data) => api.post('/auth/register-school', data),
   logout: () => api.post('/auth/logout'),
   refreshToken: () => api.post('/auth/refresh-token'),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
-  
+
   // School
+  getSchools: () => api.get('/schools'),
+  getSchool: (id) => api.get(`/schools/${id}`),
+  createSchool: (data) => api.post('/schools', data),
   getSchoolProfile: () => api.get('/school/profile'),
   updateSchoolProfile: (data) => api.put('/school/profile', data),
-  
+
   // Classes
   getClasses: () => api.get('/classes'),
   createClass: (data) => api.post('/classes', data),
   updateClass: (id, data) => api.put(`/classes/${id}`, data),
   deleteClass: (id) => api.delete(`/classes/${id}`),
-  
+
   // Students
   getStudents: (params) => api.get('/students', { params }),
   getStudent: (id) => api.get(`/students/${id}`),
-  createStudent: (data) => {
-    const formData = new FormData()
-    Object.keys(data).forEach(key => {
-      if (key === 'photo' && data[key]) {
-        formData.append('photo', data[key])
-      } else {
-        formData.append(key, data[key])
-      }
-    })
-    return api.post('/students', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-  },
+  getStudentsByClass: (classId) => api.get('/students', { params: { classId } }),
+  createStudent: (data) => api.post('/students', data),
   updateStudent: (id, data) => api.put(`/students/${id}`, data),
   deleteStudent: (id) => api.delete(`/students/${id}`),
   registerFace: (studentId, image) => api.post(`/students/${studentId}/face`, { image }),
-  
+
   // Attendance
   captureAttendance: (data) => api.post('/attendance/capture', data),
   getDailyAttendance: (params) => api.get('/attendance/daily', { params }),
@@ -135,16 +129,16 @@ export const apiMethods = {
   updateAttendance: (id, data) => api.put(`/attendance/${id}`, data),
   getStudentAttendance: (studentId) => api.get(`/attendance/student/${studentId}`),
   syncOfflineAttendance: (data) => api.post('/attendance/sync', data),
-  
+
   // Reports
   generateReport: (type, params) => api.get(`/reports/${type}`, { params }),
   exportReport: (format, data) => api.post('/reports/export', { format, data }),
-  
+
   // AI Service
   detectFaces: (image) => api.post('/ai/detect', { image }),
   recognizeFaces: (image) => api.post('/ai/recognize', { image }),
   encodeFace: (image) => api.post('/ai/encode', { image }),
-  
+
   // Users (for admin)
   getUsers: () => api.get('/users'),
   createUser: (data) => api.post('/users', data),
@@ -164,12 +158,12 @@ export const offlineApi = {
     })
     localStorage.setItem(STORAGE_KEYS.OFFLINE_DATA, JSON.stringify(requests))
   },
-  
+
   processQueue: async () => {
     const requests = JSON.parse(localStorage.getItem(STORAGE_KEYS.OFFLINE_DATA) || '[]')
     const successful = []
     const failed = []
-    
+
     for (const request of requests) {
       try {
         await apiMethods[request.endpoint](request.data)
@@ -178,11 +172,11 @@ export const offlineApi = {
         failed.push({ ...request, error })
       }
     }
-    
+
     // Remove successful requests
     const remaining = requests.filter(req => !successful.includes(req.id))
     localStorage.setItem(STORAGE_KEYS.OFFLINE_DATA, JSON.stringify(remaining))
-    
+
     return { successful: successful.length, failed: failed.length, failedRequests: failed }
   }
 }

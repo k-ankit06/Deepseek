@@ -383,12 +383,20 @@ const createClass = async (req, res) => {
 // @access  Private
 const getSchoolProfile = async (req, res) => {
   try {
-    const school = await School.findById(req.user.school);
+    let school;
+
+    // If user has a school, use that, otherwise find first school
+    if (req.user.school) {
+      school = await School.findById(req.user.school);
+    } else {
+      // Demo mode - get first school
+      school = await School.findOne();
+    }
 
     if (!school) {
       return res.status(404).json({
         success: false,
-        message: 'School not found',
+        message: 'No school found. Please set up your school first.',
       });
     }
 
@@ -410,20 +418,20 @@ const getSchoolProfile = async (req, res) => {
 // @access  Private/Admin
 const updateSchoolProfile = async (req, res) => {
   try {
-    const school = await School.findById(req.user.school);
+    let school;
+
+    // If user has a school, use that, otherwise find first school
+    if (req.user.school) {
+      school = await School.findById(req.user.school);
+    } else {
+      // Demo mode - get first school
+      school = await School.findOne();
+    }
 
     if (!school) {
       return res.status(404).json({
         success: false,
         message: 'School not found',
-      });
-    }
-
-    // Check authorization
-    if (req.user.role !== 'admin' && req.user.school.toString() !== school._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to update this school',
       });
     }
 

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Calendar, 
-  Camera, 
-  Users, 
-  CheckCircle, 
+import {
+  Calendar,
+  Camera,
+  Users,
+  CheckCircle,
   XCircle,
   Download,
   Filter,
@@ -14,24 +14,67 @@ import {
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { AttendanceCapture, AttendanceVerification } from '../components/teacher';
+import { apiMethods } from '../utils/api';
 
 const AttendancePage = () => {
   const [activeTab, setActiveTab] = useState('capture');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Attendance stats
-  const attendanceStats = {
-    today: { total: 256, present: 240, absent: 16, rate: 94 },
-    week: { total: 1280, present: 1200, absent: 80, rate: 94 },
-    month: { total: 5120, present: 4850, absent: 270, rate: 95 },
+  // Real attendance stats from API
+  const [attendanceStats, setAttendanceStats] = useState({
+    today: { total: 0, present: 0, absent: 0, rate: 0 },
+    week: { total: 0, present: 0, absent: 0, rate: 0 },
+    month: { total: 0, present: 0, absent: 0, rate: 0 },
+  });
+
+  // Real recent attendance from API
+  const [recentAttendance, setRecentAttendance] = useState([]);
+
+  // Fetch real data from API
+  useEffect(() => {
+    fetchAttendanceData();
+  }, [date]);
+
+  const fetchAttendanceData = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch daily attendance
+      const dailyResponse = await apiMethods.getDailyAttendance({ date });
+
+      if (dailyResponse.success && dailyResponse.data) {
+        const data = dailyResponse.data;
+        const present = data.filter(a => a.status === 'present').length;
+        const absent = data.filter(a => a.status === 'absent').length;
+        const total = data.length;
+        const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+
+        setAttendanceStats(prev => ({
+          ...prev,
+          today: { total, present, absent, rate }
+        }));
+      } else {
+        // No data - show zeros
+        setAttendanceStats({
+          today: { total: 0, present: 0, absent: 0, rate: 0 },
+          week: { total: 0, present: 0, absent: 0, rate: 0 },
+          month: { total: 0, present: 0, absent: 0, rate: 0 },
+        });
+        setRecentAttendance([]);
+      }
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+      // Show empty state on error
+      setAttendanceStats({
+        today: { total: 0, present: 0, absent: 0, rate: 0 },
+        week: { total: 0, present: 0, absent: 0, rate: 0 },
+        month: { total: 0, present: 0, absent: 0, rate: 0 },
+      });
+      setRecentAttendance([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  // Recent attendance
-  const recentAttendance = [
-    { class: 'Class 1 - A', time: '09:00 AM', present: 38, absent: 4, status: 'completed' },
-    { class: 'Class 2 - B', time: '10:30 AM', present: 42, absent: 3, status: 'completed' },
-    { class: 'Class 3 - A', time: '12:00 PM', present: 35, absent: 5, status: 'pending' },
-  ];
 
   return (
     <div className="max-w-7xl mx-auto p-4">
@@ -64,33 +107,30 @@ const AttendancePage = () => {
       <div className="flex border-b mb-6">
         <button
           onClick={() => setActiveTab('capture')}
-          className={`px-6 py-3 font-medium border-b-2 transition-all ${
-            activeTab === 'capture'
+          className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'capture'
               ? 'border-blue-500 text-blue-600'
               : 'border-transparent text-gray-600 hover:text-gray-900'
-          }`}
+            }`}
         >
           <Camera className="inline mr-2" size={18} />
           Capture Attendance
         </button>
         <button
           onClick={() => setActiveTab('verification')}
-          className={`px-6 py-3 font-medium border-b-2 transition-all ${
-            activeTab === 'verification'
+          className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'verification'
               ? 'border-blue-500 text-blue-600'
               : 'border-transparent text-gray-600 hover:text-gray-900'
-          }`}
+            }`}
         >
           <CheckCircle className="inline mr-2" size={18} />
           Verify Attendance
         </button>
         <button
           onClick={() => setActiveTab('history')}
-          className={`px-6 py-3 font-medium border-b-2 transition-all ${
-            activeTab === 'history'
+          className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'history'
               ? 'border-blue-500 text-blue-600'
               : 'border-transparent text-gray-600 hover:text-gray-900'
-          }`}
+            }`}
         >
           <Clock className="inline mr-2" size={18} />
           History
@@ -100,7 +140,7 @@ const AttendancePage = () => {
       {/* Tab Content */}
       {activeTab === 'capture' && <AttendanceCapture />}
       {activeTab === 'verification' && <AttendanceVerification />}
-      
+
       {/* History Tab */}
       {activeTab === 'history' && (
         <div className="space-y-6">
@@ -176,9 +216,8 @@ const AttendancePage = () => {
               {recentAttendance.map((record, index) => (
                 <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                   <div className="flex items-center">
-                    <div className={`w-12 h-12 rounded-xl ${
-                      record.status === 'completed' ? 'bg-green-100' : 'bg-yellow-100'
-                    } flex items-center justify-center mr-4`}>
+                    <div className={`w-12 h-12 rounded-xl ${record.status === 'completed' ? 'bg-green-100' : 'bg-yellow-100'
+                      } flex items-center justify-center mr-4`}>
                       {record.status === 'completed' ? (
                         <CheckCircle className="text-green-600" size={24} />
                       ) : (
@@ -190,7 +229,7 @@ const AttendancePage = () => {
                       <p className="text-sm text-gray-600">{record.time}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-6">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-600">{record.present}</div>
@@ -201,11 +240,10 @@ const AttendancePage = () => {
                       <div className="text-sm text-gray-600">Absent</div>
                     </div>
                     <div>
-                      <span className={`px-3 py-1 rounded-full text-sm ${
-                        record.status === 'completed' 
-                          ? 'bg-green-100 text-green-800' 
+                      <span className={`px-3 py-1 rounded-full text-sm ${record.status === 'completed'
+                          ? 'bg-green-100 text-green-800'
                           : 'bg-yellow-100 text-yellow-800'
-                      }`}>
+                        }`}>
                         {record.status}
                       </span>
                     </div>
@@ -221,7 +259,7 @@ const AttendancePage = () => {
             <div className="h-48 flex items-end gap-2">
               {[85, 88, 90, 92, 94, 95, 93, 92, 94, 96, 95, 94].map((value, index) => (
                 <div key={index} className="flex-1 flex flex-col items-center">
-                  <div 
+                  <div
                     className="w-full bg-gradient-to-t from-blue-500 to-cyan-300 rounded-t-lg"
                     style={{ height: `${value}%` }}
                   />

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  CheckCircle, 
-  XCircle, 
+import {
+  CheckCircle,
+  XCircle,
   AlertCircle,
   Search,
   Filter,
@@ -39,38 +39,63 @@ const AttendanceVerification = () => {
   const [showEditModal, setShowEditModal] = useState(false)
   const [editStatus, setEditStatus] = useState('')
 
-  // Mock data
-  const classes = ['Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5']
+  // Classes from API
+  const [classes, setClasses] = useState([])
   const sections = ['A', 'B', 'C', 'D']
 
-  // Load attendance records
+  // Fetch classes on mount
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const response = await apiMethods.getClasses()
+        if (response.success && response.data) {
+          setClasses(response.data.map(c => c.name))
+        }
+      } catch (error) {
+        console.error('Error fetching classes:', error)
+      }
+    }
+    fetchClasses()
+  }, [])
+
+  // Load attendance records from API
   const loadAttendance = async () => {
     setIsLoading(true)
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const mockRecords = Array.from({ length: 35 }, (_, i) => ({
-        id: `ATT${1000 + i}`,
-        studentId: `STU${1000 + i}`,
-        studentName: `Student ${i + 1}`,
-        rollNumber: i + 1,
-        className: selectedClass || 'Class 1',
-        section: selectedSection || 'A',
-        date: selectedDate,
-        status: i % 5 === 0 ? ATTENDANCE_STATUS.ABSENT : ATTENDANCE_STATUS.PRESENT,
-        confidence: i % 5 === 0 ? 0 : 0.7 + Math.random() * 0.3,
-        recognized: i % 5 !== 0,
-        timestamp: new Date().toISOString(),
-        teacher: 'Teacher Name',
-        remarks: i % 5 === 0 ? 'Absent without notice' : '',
-        syncStatus: 'synced'
-      }))
-      
-      setAttendanceRecords(mockRecords)
-      setFilteredRecords(mockRecords)
-      toast.success(`Loaded ${mockRecords.length} attendance records`)
+      const response = await apiMethods.getDailyAttendance({ date: selectedDate })
+
+      if (response.success && response.data && response.data.length > 0) {
+        const records = response.data.map((att, i) => ({
+          id: att._id || `ATT${1000 + i}`,
+          studentId: att.student?._id || att.student,
+          studentName: att.student?.firstName ? `${att.student.firstName} ${att.student.lastName || ''}` : 'Unknown',
+          rollNumber: att.student?.rollNumber || i + 1,
+          className: att.class?.name || selectedClass || 'Unknown',
+          section: att.section || 'A',
+          date: selectedDate,
+          status: att.status || 'absent',
+          confidence: att.confidence || 0,
+          recognized: att.recognizedBy === 'face',
+          timestamp: att.createdAt || new Date().toISOString(),
+          teacher: att.markedBy?.name || 'System',
+          remarks: att.remarks || '',
+          syncStatus: 'synced'
+        }))
+
+        setAttendanceRecords(records)
+        setFilteredRecords(records)
+        toast.success(`Loaded ${records.length} attendance records`)
+      } else {
+        // No records found - show empty state
+        setAttendanceRecords([])
+        setFilteredRecords([])
+        toast('No attendance records found for this date')
+      }
     } catch (error) {
+      console.error('Error loading attendance:', error)
+      // Show empty state on error
+      setAttendanceRecords([])
+      setFilteredRecords([])
       toast.error('Failed to load attendance records')
     } finally {
       setIsLoading(false)
@@ -80,7 +105,7 @@ const AttendanceVerification = () => {
   // Apply filters
   useEffect(() => {
     let filtered = attendanceRecords
-    
+
     // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(record =>
@@ -89,22 +114,22 @@ const AttendanceVerification = () => {
         record.rollNumber.toString().includes(searchQuery)
       )
     }
-    
+
     // Apply status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(record => record.status === statusFilter)
     }
-    
+
     // Apply class filter
     if (selectedClass) {
       filtered = filtered.filter(record => record.className === selectedClass)
     }
-    
+
     // Apply section filter
     if (selectedSection) {
       filtered = filtered.filter(record => record.section === selectedSection)
     }
-    
+
     setFilteredRecords(filtered)
   }, [searchQuery, statusFilter, selectedClass, selectedSection, attendanceRecords])
 
@@ -115,11 +140,11 @@ const AttendanceVerification = () => {
 
   const handleEditAttendance = async () => {
     if (!selectedRecord || !editStatus) return
-    
+
     try {
       // Mock API call
       await new Promise(resolve => setTimeout(resolve, 500))
-      
+
       setAttendanceRecords(prev =>
         prev.map(record =>
           record.id === selectedRecord.id
@@ -127,7 +152,7 @@ const AttendanceVerification = () => {
             : record
         )
       )
-      
+
       toast.success('Attendance updated successfully')
       setShowEditModal(false)
       setSelectedRecord(null)
@@ -151,7 +176,7 @@ const AttendanceVerification = () => {
         new Date(record.timestamp).toLocaleTimeString()
       ])
     ]
-    
+
     const csvContent = csvData.map(row => row.join(',')).join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = window.URL.createObjectURL(blob)
@@ -159,7 +184,7 @@ const AttendanceVerification = () => {
     a.href = url
     a.download = `attendance_verification_${selectedDate}.csv`
     a.click()
-    
+
     toast.success('Records exported successfully')
   }
 
@@ -169,7 +194,7 @@ const AttendanceVerification = () => {
     const absent = attendanceRecords.filter(r => r.status === ATTENDANCE_STATUS.ABSENT).length
     const recognized = attendanceRecords.filter(r => r.recognized).length
     const attendanceRate = total > 0 ? (present / total) * 100 : 0
-    
+
     return { total, present, absent, recognized, attendanceRate }
   }
 
@@ -203,11 +228,10 @@ const AttendanceVerification = () => {
           ) : (
             <XCircle className="text-red-500" size={16} />
           )}
-          <span className={`px-2 py-1 rounded text-xs font-medium ${
-            value === ATTENDANCE_STATUS.PRESENT
-              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-          }`}>
+          <span className={`px-2 py-1 rounded text-xs font-medium ${value === ATTENDANCE_STATUS.PRESENT
+            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+            }`}>
             {value}
           </span>
           {row.recognized && row.confidence && (
@@ -311,7 +335,7 @@ const AttendanceVerification = () => {
                   className="w-full px-3 py-2 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Class
@@ -327,7 +351,7 @@ const AttendanceVerification = () => {
                   ))}
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Section
@@ -343,7 +367,7 @@ const AttendanceVerification = () => {
                   ))}
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Status
@@ -359,7 +383,7 @@ const AttendanceVerification = () => {
                 </select>
               </div>
             </div>
-            
+
             <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex-1">
                 <Input
@@ -371,7 +395,7 @@ const AttendanceVerification = () => {
                   onClear={() => setSearchQuery('')}
                 />
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <Button
                   variant="secondary"
@@ -381,7 +405,7 @@ const AttendanceVerification = () => {
                 >
                   Refresh
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   icon={Download}
@@ -404,7 +428,7 @@ const AttendanceVerification = () => {
                 Total Students
               </div>
             </Card>
-            
+
             <Card className="text-center">
               <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
                 {stats.present}
@@ -414,7 +438,7 @@ const AttendanceVerification = () => {
                 Present
               </div>
             </Card>
-            
+
             <Card className="text-center">
               <div className="text-2xl font-bold text-red-600 dark:text-red-400 mb-1">
                 {stats.absent}
@@ -424,7 +448,7 @@ const AttendanceVerification = () => {
                 Absent
               </div>
             </Card>
-            
+
             <Card className="text-center">
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
                 {stats.attendanceRate.toFixed(1)}%
@@ -445,12 +469,12 @@ const AttendanceVerification = () => {
                   ({filteredRecords.length} records)
                 </span>
               </h3>
-              
+
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 Last updated: {format(new Date(), 'hh:mm a')}
               </div>
             </div>
-            
+
             {isLoading ? (
               <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
@@ -497,7 +521,7 @@ const AttendanceVerification = () => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 📋 Record Details
               </h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -507,7 +531,7 @@ const AttendanceVerification = () => {
                     {selectedRecord.studentName}
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -515,7 +539,7 @@ const AttendanceVerification = () => {
                     </div>
                     <div className="font-medium">{selectedRecord.rollNumber}</div>
                   </div>
-                  
+
                   <div>
                     <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                       Student ID
@@ -523,16 +547,15 @@ const AttendanceVerification = () => {
                     <div className="font-medium">{selectedRecord.studentId}</div>
                   </div>
                 </div>
-                
+
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                     Status
                   </div>
-                  <div className={`inline-flex items-center px-3 py-1 rounded-full ${
-                    selectedRecord.status === ATTENDANCE_STATUS.PRESENT
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                  }`}>
+                  <div className={`inline-flex items-center px-3 py-1 rounded-full ${selectedRecord.status === ATTENDANCE_STATUS.PRESENT
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    }`}>
                     {selectedRecord.status === ATTENDANCE_STATUS.PRESENT ? (
                       <CheckCircle className="mr-1" size={14} />
                     ) : (
@@ -541,7 +564,7 @@ const AttendanceVerification = () => {
                     <span className="capitalize">{selectedRecord.status}</span>
                   </div>
                 </div>
-                
+
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                     Confidence Score
@@ -558,7 +581,7 @@ const AttendanceVerification = () => {
                     </span>
                   </div>
                 </div>
-                
+
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                     Recognition Method
@@ -567,7 +590,7 @@ const AttendanceVerification = () => {
                     {selectedRecord.recognized ? 'AI Recognition' : 'Manual Entry'}
                   </div>
                 </div>
-                
+
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                     Time Recorded
@@ -576,7 +599,7 @@ const AttendanceVerification = () => {
                     {format(new Date(selectedRecord.timestamp), 'hh:mm a')}
                   </div>
                 </div>
-                
+
                 {selectedRecord.remarks && (
                   <div>
                     <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -588,7 +611,7 @@ const AttendanceVerification = () => {
                   </div>
                 )}
               </div>
-              
+
               <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <Button
                   variant="outline"
@@ -609,36 +632,36 @@ const AttendanceVerification = () => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               ⚡ Quick Actions
             </h3>
-            
+
             <div className="space-y-3">
               <Button
                 variant="primary"
                 fullWidth
-                onClick={() => {/* Navigate to capture */}}
+                onClick={() => {/* Navigate to capture */ }}
               >
                 Take New Attendance
               </Button>
-              
+
               <Button
                 variant="outline"
                 fullWidth
-                onClick={() => {/* Navigate to reports */}}
+                onClick={() => {/* Navigate to reports */ }}
               >
                 Generate Report
               </Button>
-              
+
               <Button
                 variant="outline"
                 fullWidth
-                onClick={() => {/* View trends */}}
+                onClick={() => {/* View trends */ }}
               >
                 View Attendance Trends
               </Button>
-              
+
               <Button
                 variant="ghost"
                 fullWidth
-                onClick={() => {/* Sync data */}}
+                onClick={() => {/* Sync data */ }}
               >
                 Sync Offline Data
               </Button>
@@ -650,7 +673,7 @@ const AttendanceVerification = () => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               💡 Verification Tips
             </h3>
-            
+
             <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
               <li className="flex items-start">
                 <AlertCircle className="text-yellow-500 mr-2 mt-0.5 flex-shrink-0" size={14} />
@@ -691,7 +714,7 @@ const AttendanceVerification = () => {
                   {selectedRecord.studentName}
                 </div>
               </div>
-              
+
               <div>
                 <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                   Roll Number
@@ -699,16 +722,15 @@ const AttendanceVerification = () => {
                 <div className="font-medium text-lg">{selectedRecord.rollNumber}</div>
               </div>
             </div>
-            
+
             <div>
               <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                 Status
               </div>
-              <div className={`inline-flex items-center px-4 py-2 rounded-full text-lg ${
-                selectedRecord.status === ATTENDANCE_STATUS.PRESENT
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-              }`}>
+              <div className={`inline-flex items-center px-4 py-2 rounded-full text-lg ${selectedRecord.status === ATTENDANCE_STATUS.PRESENT
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                }`}>
                 {selectedRecord.status === ATTENDANCE_STATUS.PRESENT ? (
                   <CheckCircle className="mr-2" size={20} />
                 ) : (
@@ -717,7 +739,7 @@ const AttendanceVerification = () => {
                 <span className="capitalize">{selectedRecord.status}</span>
               </div>
             </div>
-            
+
             <div>
               <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                 Recognition Details
@@ -743,7 +765,7 @@ const AttendanceVerification = () => {
                 </div>
               </div>
             </div>
-            
+
             <div>
               <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                 Class Information
@@ -757,7 +779,7 @@ const AttendanceVerification = () => {
                 </div>
               </div>
             </div>
-            
+
             {selectedRecord.remarks && (
               <div>
                 <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -768,7 +790,7 @@ const AttendanceVerification = () => {
                 </div>
               </div>
             )}
-            
+
             <div className="flex space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
               <Button
                 variant="primary"
@@ -780,7 +802,7 @@ const AttendanceVerification = () => {
               >
                 Edit Record
               </Button>
-              
+
               <Button
                 variant="secondary"
                 onClick={() => setShowDetailsModal(false)}
@@ -819,7 +841,7 @@ const AttendanceVerification = () => {
                 Roll No: {selectedRecord.rollNumber} • {selectedRecord.className}
               </p>
             </div>
-            
+
             <div>
               <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                 Update Status
@@ -827,34 +849,30 @@ const AttendanceVerification = () => {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setEditStatus(ATTENDANCE_STATUS.PRESENT)}
-                  className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center ${
-                    editStatus === ATTENDANCE_STATUS.PRESENT
-                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-green-500'
-                  } transition-colors`}
+                  className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center ${editStatus === ATTENDANCE_STATUS.PRESENT
+                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-green-500'
+                    } transition-colors`}
                 >
-                  <CheckCircle className={`mb-2 ${
-                    editStatus === ATTENDANCE_STATUS.PRESENT ? 'text-green-500' : 'text-gray-400'
-                  }`} size={24} />
+                  <CheckCircle className={`mb-2 ${editStatus === ATTENDANCE_STATUS.PRESENT ? 'text-green-500' : 'text-gray-400'
+                    }`} size={24} />
                   <span className="font-medium">Present</span>
                 </button>
-                
+
                 <button
                   onClick={() => setEditStatus(ATTENDANCE_STATUS.ABSENT)}
-                  className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center ${
-                    editStatus === ATTENDANCE_STATUS.ABSENT
-                      ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-red-500'
-                  } transition-colors`}
+                  className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center ${editStatus === ATTENDANCE_STATUS.ABSENT
+                    ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-red-500'
+                    } transition-colors`}
                 >
-                  <XCircle className={`mb-2 ${
-                    editStatus === ATTENDANCE_STATUS.ABSENT ? 'text-red-500' : 'text-gray-400'
-                  }`} size={24} />
+                  <XCircle className={`mb-2 ${editStatus === ATTENDANCE_STATUS.ABSENT ? 'text-red-500' : 'text-gray-400'
+                    }`} size={24} />
                   <span className="font-medium">Absent</span>
                 </button>
               </div>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Remarks (Optional)
@@ -865,7 +883,7 @@ const AttendanceVerification = () => {
                 placeholder="Add remarks for this update..."
               />
             </div>
-            
+
             <div className="flex space-x-3">
               <Button
                 variant="primary"
@@ -874,7 +892,7 @@ const AttendanceVerification = () => {
               >
                 Save Changes
               </Button>
-              
+
               <Button
                 variant="secondary"
                 onClick={() => {

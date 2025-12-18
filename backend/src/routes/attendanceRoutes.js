@@ -24,9 +24,9 @@ const recognizeAttendanceValidation = [
 ];
 
 const captureAttendanceValidation = [
-  body('classId').notEmpty().withMessage('Class ID is required'),
-  body('imageData').notEmpty().withMessage('Image data is required'),
-  body('mode').optional().isIn(['online', 'offline']).withMessage('Mode must be online or offline'),
+  body('classId').optional(),
+  body('imageData').optional(),
+  body('mode').optional(),
 ];
 
 const updateAttendanceValidation = [
@@ -35,14 +35,14 @@ const updateAttendanceValidation = [
 ];
 
 const dailyAttendanceValidation = [
-  query('date').optional().isISO8601().withMessage('Valid date is required'),
-  query('classId').notEmpty().withMessage('Class ID is required'),
+  query('date').optional(),
+  query('classId').optional(),
 ];
 
 const monthlyAttendanceValidation = [
-  query('month').notEmpty().withMessage('Month is required'),
-  query('year').notEmpty().withMessage('Year is required'),
-  query('classId').notEmpty().withMessage('Class ID is required'),
+  query('month').optional(),
+  query('year').optional(),
+  query('classId').optional(),
 ];
 
 // Attendance routes

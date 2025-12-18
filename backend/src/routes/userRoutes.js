@@ -12,7 +12,8 @@ router.put('/profile', userController.updateCurrentUserProfile);
 
 // Admin routes
 router.route('/')
-  .get(authorize('admin'), userController.getUsers);
+  .get(authorize('admin'), userController.getUsers)
+  .post(authorize('admin'), userController.createUser);
 
 router.route('/:id')
   .get(authorize('admin'), userController.getUserById)

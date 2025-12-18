@@ -9,7 +9,13 @@ const { generateToken } = require('../utils/jwt');
  * @access  Private/Admin
  */
 const getUsers = asyncHandler(async (req, res) => {
-  const users = await User.find({ school: req.user.school })
+  // Build filter - if user has a school, filter by school
+  const filter = {};
+  if (req.user.school) {
+    filter.school = req.user.school;
+  }
+
+  const users = await User.find(filter)
     .select('-password')
     .populate('school', 'name code');
 
@@ -17,6 +23,59 @@ const getUsers = asyncHandler(async (req, res) => {
     success: true,
     count: users.length,
     data: users
+  });
+});
+
+/**
+ * @desc    Create new user (teacher)
+ * @route   POST /api/users
+ * @access  Private/Admin
+ */
+const createUser = asyncHandler(async (req, res) => {
+  const { name, email, password, phone, role, classes } = req.body;
+
+  // Check if user already exists
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    return res.status(400).json({
+      success: false,
+      message: 'User with this email already exists'
+    });
+  }
+
+  // Get school - either from user or from request body or find first school
+  let schoolId = req.user.school || req.body.school;
+
+  if (!schoolId) {
+    // Find first school in database
+    const firstSchool = await School.findOne();
+    if (firstSchool) {
+      schoolId = firstSchool._id;
+    }
+  }
+
+  // Create user
+  const user = await User.create({
+    name,
+    email,
+    password: password || 'teacher123', // Default password
+    phone,
+    role: role || 'teacher',
+    school: schoolId,
+    classes: classes || []
+  });
+
+  res.status(201).json({
+    success: true,
+    message: 'User created successfully',
+    data: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      school: user.school
+    }
   });
 });
 
@@ -91,7 +150,7 @@ const updateUser = asyncHandler(async (req, res) => {
   user.name = name || user.name;
   user.email = email || user.email;
   user.phone = phone || user.phone;
-  
+
   // Only admin can change role and active status
   if (req.user.role === 'admin') {
     if (role) user.role = role;
@@ -232,6 +291,7 @@ const updateCurrentUserProfile = asyncHandler(async (req, res) => {
 
 module.exports = {
   getUsers,
+  createUser,
   getUserById,
   updateUser,
   deleteUser,

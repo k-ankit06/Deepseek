@@ -35,7 +35,15 @@ const resetPasswordValidation = [
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
 ];
 
+const registerSchoolValidation = [
+  body('schoolName').notEmpty().withMessage('School name is required'),
+  body('schoolCode').notEmpty().withMessage('School code is required'),
+  body('adminEmail').isEmail().withMessage('Please include a valid admin email'),
+  body('adminPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+];
+
 // Public routes
+router.post('/register-school', validate(registerSchoolValidation), authController.registerSchool);
 router.post('/register', validate(registerValidation), authController.register);
 router.post('/login', validate(loginValidation), authController.login);
 router.post('/forgot-password', validate(forgotPasswordValidation), authController.forgotPassword);

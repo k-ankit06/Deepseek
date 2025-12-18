@@ -4,6 +4,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 
 // Pages
 import LoginPage from './pages/LoginPage'
+import SchoolSignupPage from './pages/SchoolSignupPage'
 import Dashboard from './pages/Dashboard'
 import AdminDashboard from './pages/AdminDashboard'
 import TeacherDashboard from './pages/TeacherDashboard'
@@ -20,6 +21,11 @@ const routes = [
   {
     path: '/login',
     component: LoginPage,
+    protected: false
+  },
+  {
+    path: '/signup',
+    component: SchoolSignupPage,
     protected: false
   },
   {

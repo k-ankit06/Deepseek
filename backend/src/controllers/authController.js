@@ -2,7 +2,111 @@ const User = require('../models/User');
 const School = require('../models/School');
 const { generateToken } = require('../utils/jwt');
 
-// @desc    Register user
+// @desc    Register new school with admin
+// @route   POST /api/auth/register-school
+// @access  Public
+const registerSchool = async (req, res) => {
+  try {
+    const {
+      // School info
+      schoolName,
+      schoolCode,
+      city,
+      state,
+      phone: schoolPhone,
+      email: schoolEmail,
+      principalName,
+      // Admin info
+      adminName,
+      adminEmail,
+      adminPassword,
+      adminPhone
+    } = req.body;
+
+    // Validate required fields
+    if (!schoolName || !schoolCode || !adminEmail || !adminPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide school name, code, admin email and password',
+      });
+    }
+
+    // Check if school code already exists
+    const existingSchool = await School.findOne({ code: schoolCode.toUpperCase() });
+    if (existingSchool) {
+      return res.status(400).json({
+        success: false,
+        message: 'School with this code already exists',
+      });
+    }
+
+    // Check if admin email already exists
+    const existingUser = await User.findOne({ email: adminEmail });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists',
+      });
+    }
+
+    // Create school
+    const currentYear = new Date().getFullYear();
+    const school = await School.create({
+      name: schoolName,
+      code: schoolCode.toUpperCase(),
+      address: {
+        city: city || '',
+        state: state || '',
+      },
+      contact: {
+        phone: schoolPhone || '',
+        email: schoolEmail || adminEmail,
+        principalName: principalName || adminName,
+      },
+      academicYear: `${currentYear}-${currentYear + 1}`,
+    });
+
+    // Create admin user for this school
+    const admin = await User.create({
+      name: adminName || 'School Admin',
+      email: adminEmail,
+      password: adminPassword,
+      role: 'admin',
+      phone: adminPhone || '',
+      school: school._id,
+    });
+
+    // Generate token
+    const token = generateToken(admin._id);
+
+    res.status(201).json({
+      success: true,
+      message: 'School registered successfully! You can now login.',
+      data: {
+        token,
+        user: {
+          id: admin._id,
+          name: admin.name,
+          email: admin.email,
+          role: admin.role,
+          school: {
+            _id: school._id,
+            name: school.name,
+            code: school.code,
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.error('School registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during school registration',
+    });
+  }
+};
+
+// @desc    Register user (teacher) to existing school
 // @route   POST /api/auth/register
 // @access  Public
 const register = async (req, res) => {
@@ -84,7 +188,7 @@ const login = async (req, res) => {
 
     // Check for user
     const user = await User.findOne({ email }).select('+password').populate('school', 'name code');
-    
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -295,6 +399,7 @@ const refreshToken = async (req, res) => {
 };
 
 module.exports = {
+  registerSchool,
   register,
   login,
   getMe,

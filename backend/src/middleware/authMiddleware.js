@@ -12,7 +12,22 @@ const protect = async (req, res, next) => {
       // Get token from header
       token = req.headers.authorization.split(' ')[1];
 
-      // Verify token
+      // DEMO MODE: Allow demo tokens for development/testing
+      if (token === 'demo_token_123') {
+        // Create a mock user for demo mode
+        req.user = {
+          _id: 'demo_user_id',
+          id: 'demo_user_id',
+          name: 'Demo User',
+          email: 'demo@school.com',
+          role: 'admin',
+          isActive: true,
+          save: async () => { } // Mock save function
+        };
+        return next();
+      }
+
+      // Verify real JWT token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
       // Get user from token

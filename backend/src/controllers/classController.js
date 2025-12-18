@@ -12,7 +12,7 @@ const getClasses = asyncHandler(async (req, res) => {
   // Teachers can only see classes from their school
   // Admins can see all classes if they specify a school
   const filter = {};
-  
+
   if (req.user.role === 'teacher') {
     filter.school = req.user.school;
   } else if (req.user.role === 'admin' && req.query.schoolId) {
@@ -68,14 +68,30 @@ const getClass = asyncHandler(async (req, res) => {
  * @access  Private/Admin/Teacher
  */
 const createClass = asyncHandler(async (req, res) => {
-  const { name, grade, section, academicYear, subjects, schedule } = req.body;
+  const { name, grade, section, subjects, schedule } = req.body;
 
-  // For teachers, use their school
-  // For admins, they must specify school
-  let schoolId = req.user.school;
-  if (req.user.role === 'admin' && req.body.school) {
-    schoolId = req.body.school;
+  // For demo mode or when school is not specified, create or use default school
+  let schoolId = req.user.school || req.body.school;
+
+  // If no school, try to find or create a default one
+  if (!schoolId) {
+    const currentYear = new Date().getFullYear();
+    let defaultSchool = await School.findOne({ code: 'DEMO001' });
+    if (!defaultSchool) {
+      defaultSchool = await School.create({
+        name: 'Demo School',
+        code: 'DEMO001',
+        address: { street: 'Demo Street', city: 'Demo City', state: 'Demo State', pincode: '123456' },
+        contact: { phone: '1234567890', email: 'demo@school.com', principalName: 'Demo Principal' },
+        academicYear: `${currentYear}-${currentYear + 1}`
+      });
+    }
+    schoolId = defaultSchool._id;
   }
+
+  // Generate academic year if not provided
+  const currentYear = new Date().getFullYear();
+  const academicYear = req.body.academicYear || `${currentYear}-${currentYear + 1}`;
 
   // Check if class already exists
   const existingClass = await Class.findOne({
@@ -93,7 +109,7 @@ const createClass = asyncHandler(async (req, res) => {
   }
 
   const classObj = await Class.create({
-    name,
+    name: name || `Class ${grade}`,
     grade,
     section,
     academicYear,
@@ -169,7 +185,7 @@ const updateClass = asyncHandler(async (req, res) => {
   classObj.teacher = teacher || classObj.teacher;
   classObj.subjects = subjects || classObj.subjects;
   classObj.schedule = schedule || classObj.schedule;
-  
+
   if (req.user.role === 'admin' && isActive !== undefined) {
     classObj.isActive = isActive;
   }
@@ -212,7 +228,7 @@ const deleteClass = asyncHandler(async (req, res) => {
 
   // Check if class has students
   const studentCount = await Student.countDocuments({ class: classObj._id });
-  
+
   if (studentCount > 0) {
     return res.status(400).json({
       success: false,

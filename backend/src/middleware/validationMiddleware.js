@@ -12,6 +12,10 @@ const validate = (validations) => {
     const extractedErrors = [];
     errors.array().map((err) => extractedErrors.push({ [err.path]: err.msg }));
 
+    // Log validation errors for debugging
+    console.log('Validation errors:', JSON.stringify(extractedErrors, null, 2));
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+
     return res.status(422).json({
       success: false,
       message: 'Validation failed',

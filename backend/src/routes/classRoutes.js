@@ -10,10 +10,10 @@ router.use(protect);
 
 // Class validation
 const createClassValidation = [
-  body('name').notEmpty().withMessage('Class name is required'),
+  body('name').optional().notEmpty().withMessage('Class name cannot be empty'),
   body('grade').isInt({ min: 1, max: 12 }).withMessage('Grade must be between 1 and 12'),
   body('section').notEmpty().withMessage('Section is required'),
-  body('academicYear').notEmpty().withMessage('Academic year is required'),
+  body('academicYear').optional().notEmpty().withMessage('Academic year cannot be empty'),
 ];
 
 const updateClassValidation = [

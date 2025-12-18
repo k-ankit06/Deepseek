@@ -1,5 +1,5 @@
 // API Endpoints
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1'
 export const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:8000'
 
 // Roles
@@ -21,8 +21,8 @@ export const FACE_RECOGNITION_THRESHOLD = 0.6
 
 // Local Storage Keys
 export const STORAGE_KEYS = {
-  TOKEN: 'attendance_token',
-  USER: 'attendance_user',
+  TOKEN: 'token',
+  USER: 'user',
   OFFLINE_DATA: 'attendance_offline',
   SETTINGS: 'attendance_settings'
 }

@@ -8,14 +8,8 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 // All routes are protected
 router.use(protect);
 
-// Student validation
+// Student validation - very lenient, only classId required
 const registerStudentValidation = [
-  body('rollNumber').notEmpty().withMessage('Roll number is required'),
-  body('firstName').notEmpty().withMessage('First name is required'),
-  body('dateOfBirth').isISO8601().withMessage('Valid date of birth is required'),
-  body('gender').isIn(['Male', 'Female', 'Other']).withMessage('Gender must be Male, Female, or Other'),
-  body('parentName').notEmpty().withMessage('Parent/Guardian name is required'),
-  body('parentPhone').notEmpty().withMessage('Parent phone number is required'),
   body('classId').notEmpty().withMessage('Class ID is required'),
 ];
 

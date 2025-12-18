@@ -13,16 +13,32 @@ const schoolSchema = new mongoose.Schema({
     unique: true,
     uppercase: true,
   },
+  logo: {
+    type: String, // Base64 or URL
+  },
+  schoolType: {
+    type: String, // Any value allowed - no enum restriction
+  },
   address: {
     street: String,
     city: String,
     state: String,
     pincode: String,
+    country: {
+      type: String,
+      default: 'India',
+    },
   },
   contact: {
     phone: String,
     email: String,
     principalName: String,
+  },
+  establishmentYear: {
+    type: Number,
+  },
+  studentCapacity: {
+    type: Number,
   },
   academicYear: {
     type: String,

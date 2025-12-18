@@ -1,28 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  UserPlus, 
-  Camera, 
-  Upload, 
+import { useNavigate } from 'react-router-dom';
+import {
+  UserPlus,
+  Camera,
+  Upload,
   Save,
   Calendar,
-  Users,
   Phone,
   Mail,
-  MapPin
+  MapPin,
+  Loader2
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import CameraCapture from '../components/common/CameraCapture';
+import { apiMethods } from '../utils/api';
+import toast from 'react-hot-toast';
 
 const StudentRegistrationPage = () => {
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [classes, setClasses] = useState([]);
+  const [sections, setSections] = useState([]);
+
   const [studentInfo, setStudentInfo] = useState({
     firstName: '',
     lastName: '',
+    rollNumber: '',
     dateOfBirth: '',
     gender: '',
-    class: '',
+    classId: '',
     section: '',
     fatherName: '',
     motherName: '',
@@ -32,28 +42,157 @@ const StudentRegistrationPage = () => {
     city: '',
     pinCode: '',
   });
-  
-  const [photoPreview, setPhotoPreview] = useState(null);
-  const [showCamera, setShowCamera] = useState(false);
 
-  const handleSave = () => {
-    // Save student information
-    alert('Student registered successfully!');
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  // Fetch classes from backend
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  const fetchClasses = async () => {
+    setIsLoading(true);
+    try {
+      const response = await apiMethods.getClasses();
+      if (response.success && response.data) {
+        setClasses(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch classes:', error);
+      // If API fails, use empty array - no fake data
+      setClasses([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Get sections for selected class
+  useEffect(() => {
+    if (studentInfo.classId) {
+      const selectedClass = classes.find(c => c._id === studentInfo.classId);
+      if (selectedClass && selectedClass.sections) {
+        setSections(selectedClass.sections);
+      } else {
+        setSections(['A', 'B', 'C', 'D']); // Default sections
+      }
+    }
+  }, [studentInfo.classId, classes]);
+
+  // Validate form
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!studentInfo.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+    if (!studentInfo.lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    }
+    if (!studentInfo.rollNumber.trim()) {
+      newErrors.rollNumber = 'Roll number is required';
+    }
+    if (!studentInfo.dateOfBirth) {
+      newErrors.dateOfBirth = 'Date of birth is required';
+    }
+    if (!studentInfo.gender) {
+      newErrors.gender = 'Gender is required';
+    }
+    if (!studentInfo.classId) {
+      newErrors.classId = 'Class is required';
+    }
+    if (!studentInfo.section) {
+      newErrors.section = 'Section is required';
+    }
+    if (!studentInfo.fatherName.trim()) {
+      newErrors.fatherName = "Father's name is required";
+    }
+    if (!studentInfo.parentPhone.trim()) {
+      newErrors.parentPhone = 'Phone number is required';
+    } else if (!/^\d{10}$/.test(studentInfo.parentPhone)) {
+      newErrors.parentPhone = 'Invalid phone number (10 digits required)';
+    }
+    if (!photoPreview) {
+      newErrors.photo = 'Student photo is required for face recognition';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Prepare data for API
+      const studentData = {
+        rollNumber: studentInfo.rollNumber,
+        firstName: studentInfo.firstName,
+        lastName: studentInfo.lastName,
+        dateOfBirth: studentInfo.dateOfBirth,
+        gender: studentInfo.gender,
+        parentName: studentInfo.fatherName,
+        parentPhone: studentInfo.parentPhone,
+        address: `${studentInfo.address}, ${studentInfo.city} - ${studentInfo.pinCode}`,
+        classId: studentInfo.classId,
+      };
+
+      // Call API to register student
+      const response = await apiMethods.createStudent(studentData);
+
+      if (response.success) {
+        // If photo exists, register face
+        if (photoPreview && response.data?._id) {
+          try {
+            await apiMethods.registerFace(response.data._id, photoPreview);
+          } catch (faceError) {
+            console.error('Face registration failed:', faceError);
+            toast.error('Student saved but face registration failed');
+          }
+        }
+
+        toast.success('Student registered successfully!');
+        navigate('/admin');
+      } else {
+        toast.error(response.message || 'Failed to register student');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error(error.message || 'Failed to register student');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size should be less than 5MB');
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (e) => {
         setPhotoPreview(e.target.result);
+        setPhotoFile(file);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleCameraCapture = (imageData) => {
-    setPhotoPreview(imageData);
+  const handleCameraCapture = (data) => {
+    if (data && data.image) {
+      const imageUrl = data.image.url || data.image;
+      setPhotoPreview(imageUrl);
+    } else if (typeof data === 'string') {
+      setPhotoPreview(data);
+    }
     setShowCamera(false);
   };
 
@@ -62,6 +201,10 @@ const StudentRegistrationPage = () => {
       ...prev,
       [field]: value
     }));
+    // Clear error when field is updated
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: null }));
+    }
   };
 
   return (
@@ -78,10 +221,15 @@ const StudentRegistrationPage = () => {
               <UserPlus className="mr-3" size={32} />
               Student Registration
             </h1>
-            <p className="text-gray-600 mt-2">Register new students in the system</p>
+            <p className="text-gray-600 mt-2">Register new students with face capture for attendance</p>
           </div>
-          <Button variant="primary" icon={Save} onClick={handleSave}>
-            Register Student
+          <Button
+            variant="primary"
+            icon={isSaving ? Loader2 : Save}
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? 'Saving...' : 'Register Student'}
           </Button>
         </div>
       </motion.div>
@@ -90,21 +238,24 @@ const StudentRegistrationPage = () => {
         {/* Photo Section */}
         <div className="lg:col-span-1">
           <Card className="p-6">
-            <h3 className="font-bold text-gray-800 mb-4 text-center">Student Photo</h3>
-            
+            <h3 className="font-bold text-gray-800 mb-4 text-center">Student Photo *</h3>
+
             <div className="flex flex-col items-center">
-              <div className="w-48 h-48 rounded-xl bg-gray-100 flex items-center justify-center mb-4 overflow-hidden">
+              <div className={`w-48 h-48 rounded-xl bg-gray-100 flex items-center justify-center mb-4 overflow-hidden border-2 ${errors.photo ? 'border-red-500' : 'border-gray-200'}`}>
                 {photoPreview ? (
                   <img src={photoPreview} alt="Student" className="w-full h-full object-cover" />
                 ) : (
                   <UserPlus className="text-gray-400" size={48} />
                 )}
               </div>
-              
+              {errors.photo && (
+                <p className="text-red-500 text-sm mb-2">{errors.photo}</p>
+              )}
+
               <div className="flex gap-2 w-full">
-                <Button 
-                  variant="outline" 
-                  icon={Camera} 
+                <Button
+                  variant="outline"
+                  icon={Camera}
                   className="flex-1"
                   onClick={() => setShowCamera(true)}
                 >
@@ -114,38 +265,30 @@ const StudentRegistrationPage = () => {
                   <Button variant="outline" icon={Upload} className="w-full">
                     Upload
                   </Button>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
                     onChange={handlePhotoUpload}
                   />
                 </label>
               </div>
-              
+
               <p className="text-xs text-gray-500 mt-3 text-center">
-                Photo helps with face recognition for attendance
+                Photo is required for face recognition attendance
               </p>
             </div>
           </Card>
 
-          {/* Registration Stats */}
-          <Card className="p-6 mt-6">
-            <h3 className="font-bold text-gray-800 mb-4">Registration Info</h3>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-600">Today's Registrations</p>
-                <p className="text-2xl font-bold">12</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">This Month</p>
-                <p className="text-2xl font-bold">142</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Students</p>
-                <p className="text-2xl font-bold">1,248</p>
-              </div>
-            </div>
+          {/* Info Card */}
+          <Card className="p-6 mt-6 bg-blue-50">
+            <h3 className="font-bold text-gray-800 mb-4">Important Notes</h3>
+            <ul className="text-sm text-gray-600 space-y-2">
+              <li>• All fields marked with * are required</li>
+              <li>• Photo must be clear front-facing</li>
+              <li>• Roll number must be unique</li>
+              <li>• Phone number should be 10 digits</li>
+            </ul>
           </Card>
         </div>
 
@@ -153,8 +296,9 @@ const StudentRegistrationPage = () => {
         <div className="lg:col-span-2">
           <Card className="p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-6">Student Information</h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* First Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   First Name *
@@ -163,9 +307,11 @@ const StudentRegistrationPage = () => {
                   value={studentInfo.firstName}
                   onChange={(e) => handleChange('firstName', e.target.value)}
                   placeholder="Enter first name"
+                  error={errors.firstName}
                 />
               </div>
-              
+
+              {/* Last Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Last Name *
@@ -174,9 +320,24 @@ const StudentRegistrationPage = () => {
                   value={studentInfo.lastName}
                   onChange={(e) => handleChange('lastName', e.target.value)}
                   placeholder="Enter last name"
+                  error={errors.lastName}
                 />
               </div>
-              
+
+              {/* Roll Number */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Roll Number *
+                </label>
+                <Input
+                  value={studentInfo.rollNumber}
+                  onChange={(e) => handleChange('rollNumber', e.target.value)}
+                  placeholder="Enter roll number"
+                  error={errors.rollNumber}
+                />
+              </div>
+
+              {/* Date of Birth */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Date of Birth *
@@ -184,12 +345,13 @@ const StudentRegistrationPage = () => {
                 <Input
                   value={studentInfo.dateOfBirth}
                   onChange={(e) => handleChange('dateOfBirth', e.target.value)}
-                  placeholder="YYYY-MM-DD"
-                  icon={Calendar}
                   type="date"
+                  icon={Calendar}
+                  error={errors.dateOfBirth}
                 />
               </div>
-              
+
+              {/* Gender */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Gender *
@@ -197,33 +359,41 @@ const StudentRegistrationPage = () => {
                 <select
                   value={studentInfo.gender}
                   onChange={(e) => handleChange('gender', e.target.value)}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none ${errors.gender ? 'border-red-500' : 'border-gray-300'}`}
                 >
                   <option value="">Select gender</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                   <option value="other">Other</option>
                 </select>
+                {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
               </div>
-              
+
+              {/* Class */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Class *
                 </label>
                 <select
-                  value={studentInfo.class}
-                  onChange={(e) => handleChange('class', e.target.value)}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
+                  value={studentInfo.classId}
+                  onChange={(e) => handleChange('classId', e.target.value)}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none ${errors.classId ? 'border-red-500' : 'border-gray-300'}`}
+                  disabled={isLoading}
                 >
                   <option value="">Select class</option>
-                  <option value="1">Class 1</option>
-                  <option value="2">Class 2</option>
-                  <option value="3">Class 3</option>
-                  <option value="4">Class 4</option>
-                  <option value="5">Class 5</option>
+                  {classes.map(cls => (
+                    <option key={cls._id} value={cls._id}>
+                      {cls.name || `Class ${cls.grade}`} - {cls.section || ''}
+                    </option>
+                  ))}
                 </select>
+                {errors.classId && <p className="text-red-500 text-sm mt-1">{errors.classId}</p>}
+                {classes.length === 0 && !isLoading && (
+                  <p className="text-yellow-600 text-sm mt-1">No classes found. Please create classes first.</p>
+                )}
               </div>
-              
+
+              {/* Section */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Section *
@@ -231,15 +401,17 @@ const StudentRegistrationPage = () => {
                 <select
                   value={studentInfo.section}
                   onChange={(e) => handleChange('section', e.target.value)}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none ${errors.section ? 'border-red-500' : 'border-gray-300'}`}
                 >
                   <option value="">Select section</option>
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="C">C</option>
+                  {sections.map(sec => (
+                    <option key={sec} value={sec}>{sec}</option>
+                  ))}
                 </select>
+                {errors.section && <p className="text-red-500 text-sm mt-1">{errors.section}</p>}
               </div>
-              
+
+              {/* Father's Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Father's Name *
@@ -248,12 +420,14 @@ const StudentRegistrationPage = () => {
                   value={studentInfo.fatherName}
                   onChange={(e) => handleChange('fatherName', e.target.value)}
                   placeholder="Enter father's name"
+                  error={errors.fatherName}
                 />
               </div>
-              
+
+              {/* Mother's Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mother's Name *
+                  Mother's Name
                 </label>
                 <Input
                   value={studentInfo.motherName}
@@ -261,7 +435,8 @@ const StudentRegistrationPage = () => {
                   placeholder="Enter mother's name"
                 />
               </div>
-              
+
+              {/* Parent Phone */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Parent Phone *
@@ -269,12 +444,15 @@ const StudentRegistrationPage = () => {
                 <Input
                   value={studentInfo.parentPhone}
                   onChange={(e) => handleChange('parentPhone', e.target.value)}
-                  placeholder="Enter phone number"
+                  placeholder="Enter 10-digit phone number"
                   icon={Phone}
                   type="tel"
+                  maxLength={10}
+                  error={errors.parentPhone}
                 />
               </div>
-              
+
+              {/* Parent Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Parent Email
@@ -287,23 +465,25 @@ const StudentRegistrationPage = () => {
                   type="email"
                 />
               </div>
-              
+
+              {/* Address */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Address *
+                  Address
                 </label>
                 <textarea
                   value={studentInfo.address}
                   onChange={(e) => handleChange('address', e.target.value)}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
-                  rows="3"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
+                  rows="2"
                   placeholder="Enter complete address"
                 />
               </div>
-              
+
+              {/* City */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  City *
+                  City
                 </label>
                 <Input
                   value={studentInfo.city}
@@ -312,37 +492,33 @@ const StudentRegistrationPage = () => {
                   icon={MapPin}
                 />
               </div>
-              
+
+              {/* Pin Code */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Pin Code *
+                  Pin Code
                 </label>
                 <Input
                   value={studentInfo.pinCode}
                   onChange={(e) => handleChange('pinCode', e.target.value)}
                   placeholder="Enter pin code"
                   type="number"
+                  maxLength={6}
                 />
               </div>
             </div>
-            
-            <div className="mt-8 flex justify-end">
-              <Button variant="primary" icon={Save} onClick={handleSave}>
-                Register Student
-              </Button>
-            </div>
-          </Card>
 
-          {/* Bulk Registration */}
-          <Card className="p-6 mt-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Bulk Registration</h2>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Register multiple students</p>
-                <p className="text-sm text-gray-600">Upload CSV file with student details</p>
-              </div>
-              <Button variant="outline" icon={Upload}>
-                Upload CSV
+            <div className="mt-8 flex justify-end gap-4">
+              <Button variant="outline" onClick={() => navigate('/admin')}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                icon={isSaving ? Loader2 : Save}
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Register Student'}
               </Button>
             </div>
           </Card>
@@ -352,8 +528,12 @@ const StudentRegistrationPage = () => {
       {/* Camera Capture Modal */}
       {showCamera && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full">
-            <CameraCapture onCapture={handleCameraCapture} onCancel={() => setShowCamera(false)} />
+          <div className="bg-white rounded-xl max-w-2xl w-full overflow-hidden">
+            <CameraCapture
+              onCapture={handleCameraCapture}
+              onClose={() => setShowCamera(false)}
+              mode="photo"
+            />
           </div>
         </div>
       )}

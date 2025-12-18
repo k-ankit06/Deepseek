@@ -30,20 +30,8 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
       role: 'admin'
     },
     {
-      name: 'School Setup',
-      path: '/admin/school',
-      icon: School,
-      role: 'admin'
-    },
-    {
-      name: 'Classes',
-      path: '/admin/classes',
-      icon: BookOpen,
-      role: 'admin'
-    },
-    {
-      name: 'Teachers',
-      path: '/admin/teachers',
+      name: 'Register Student',
+      path: '/student-registration',
       icon: UserPlus,
       role: 'admin'
     },
@@ -52,6 +40,24 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
       path: '/students',
       icon: Users,
       role: 'both'
+    },
+    {
+      name: 'Teachers',
+      path: '/teachers',
+      icon: Users,
+      role: 'admin'
+    },
+    {
+      name: 'Classes',
+      path: '/classes',
+      icon: BookOpen,
+      role: 'admin'
+    },
+    {
+      name: 'School Setup',
+      path: '/school-setup',
+      icon: School,
+      role: 'admin'
     },
     {
       name: 'Attendance',
@@ -64,12 +70,6 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
       path: '/reports',
       icon: BarChart3,
       role: 'both'
-    },
-    {
-      name: 'Live Capture',
-      path: '/attendance/capture',
-      icon: Camera,
-      role: 'teacher'
     },
     {
       name: 'Settings',

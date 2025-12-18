@@ -75,7 +75,7 @@ const markAttendance = async (req, res) => {
           existingAttendance.confidenceScore = confidenceScore;
           existingAttendance.checkInTime = checkInTime ? new Date(checkInTime) : undefined;
           existingAttendance.remarks = remarks;
-          
+
           await existingAttendance.save();
         } else {
           // Create new attendance record
@@ -178,8 +178,8 @@ const updateStudentAttendanceStats = async (studentId) => {
     totalRecords += stat.count;
   });
 
-  const attendancePercentage = totalRecords > 0 
-    ? Math.round((totalPresent / totalRecords) * 100) 
+  const attendancePercentage = totalRecords > 0
+    ? Math.round((totalPresent / totalRecords) * 100)
     : 0;
 
   await Student.findByIdAndUpdate(studentId, {
@@ -190,88 +190,71 @@ const updateStudentAttendanceStats = async (studentId) => {
 };
 
 // @desc    Get attendance for a class on specific date
-// @route   GET /api/attendance/class/:classId/date/:date
+// @route   GET /api/attendance/class/:classId/date/:date OR GET /api/attendance/daily
 // @access  Private
 const getClassAttendance = async (req, res) => {
   try {
-    const { classId, date } = req.params;
-    const schoolId = req.user.school;
+    // Support both params and query
+    const classId = req.params.classId || req.query.classId;
+    const date = req.params.date || req.query.date || new Date().toISOString().split('T')[0];
+    const schoolId = req.user?.school;
 
-    // Verify class belongs to school
-    const studentClass = await Class.findOne({
-      _id: classId,
-      school: schoolId,
-    });
+    // Build query for attendance
+    const attendanceQuery = {
+      date: new Date(date),
+    };
 
-    if (!studentClass) {
-      return res.status(404).json({
-        success: false,
-        message: 'Class not found or not authorized',
+    // If classId provided, filter by class
+    if (classId) {
+      // Verify class belongs to school
+      const studentClass = await Class.findOne({
+        _id: classId,
+        ...(schoolId ? { school: schoolId } : {}),
+      });
+
+      if (!studentClass) {
+        return res.status(404).json({
+          success: false,
+          message: 'Class not found or not authorized',
+        });
+      }
+      attendanceQuery.class = classId;
+    } else if (schoolId) {
+      // Filter by school if no classId
+      attendanceQuery.school = schoolId;
+    }
+
+    // Get attendance records for the date
+    const attendanceRecords = await Attendance.find(attendanceQuery)
+      .populate('student', 'firstName lastName rollNumber')
+      .populate('class', 'name grade section');
+
+    // If no records, return empty array with success
+    if (!attendanceRecords || attendanceRecords.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        message: 'No attendance records found for this date',
       });
     }
 
-    const attendanceDate = new Date(date);
-    attendanceDate.setHours(0, 0, 0, 0);
-
-    // Get all students in the class
-    const students = await Student.find({
-      class: classId,
-      isActive: true,
-    }).sort({ rollNumber: 1 });
-
-    // Get attendance records for the date
-    const attendanceRecords = await Attendance.find({
-      class: classId,
-      date: attendanceDate,
-    });
-
-    // Create a map of studentId -> attendance
-    const attendanceMap = {};
-    attendanceRecords.forEach((record) => {
-      attendanceMap[record.student.toString()] = record;
-    });
-
-    // Combine student data with attendance
-    const attendanceData = students.map((student) => {
-      const attendance = attendanceMap[student._id.toString()];
-      return {
-        studentId: student._id,
-        rollNumber: student.rollNumber,
-        name: `${student.firstName} ${student.lastName || ''}`.trim(),
-        status: attendance ? attendance.status : 'absent',
-        markedAt: attendance ? attendance.markedAt : null,
-        markedBy: attendance ? attendance.markedBy : null,
-        recognitionMethod: attendance ? attendance.recognitionMethod : null,
-        confidenceScore: attendance ? attendance.confidenceScore : null,
-        checkInTime: attendance ? attendance.checkInTime : null,
-        remarks: attendance ? attendance.remarks : null,
-        isPresent: attendance ? (attendance.status === 'present' || attendance.status === 'late') : false,
-      };
-    });
-
-    // Calculate summary
-    const summary = {
-      total: students.length,
-      present: attendanceData.filter((item) => item.status === 'present').length,
-      absent: attendanceData.filter((item) => item.status === 'absent').length,
-      late: attendanceData.filter((item) => item.status === 'late').length,
-      leave: attendanceData.filter((item) => item.status === 'leave').length,
-      marked: attendanceRecords.length,
-      date: attendanceDate,
-    };
+    // Format response
+    const attendanceData = attendanceRecords.map((record) => ({
+      _id: record._id,
+      student: record.student,
+      class: record.class,
+      date: record.date,
+      status: record.status,
+      confidence: record.confidenceScore,
+      recognizedBy: record.recognitionMethod,
+      createdAt: record.createdAt || record.markedAt,
+      markedBy: record.markedBy,
+      remarks: record.remarks,
+    }));
 
     res.status(200).json({
       success: true,
-      data: {
-        summary,
-        attendance: attendanceData,
-        class: {
-          id: studentClass._id,
-          name: studentClass.name,
-          grade: studentClass.grade,
-          section: studentClass.section,
-        },
-      },
+      data: attendanceData,
     });
   } catch (error) {
     console.error('Get class attendance error:', error);
@@ -346,9 +329,9 @@ const getStudentAttendanceHistory = async (req, res) => {
     const presentDays = summary
       .filter((item) => item._id === 'present' || item._id === 'late')
       .reduce((total, item) => total + item.count, 0);
-    
-    const attendancePercentage = totalDays > 0 
-      ? Math.round((presentDays / totalDays) * 100) 
+
+    const attendancePercentage = totalDays > 0
+      ? Math.round((presentDays / totalDays) * 100)
       : 0;
 
     res.status(200).json({
@@ -412,10 +395,10 @@ const updateAttendance = async (req, res) => {
     attendance.remarks = remarks !== undefined ? remarks : attendance.remarks;
     attendance.markedBy = req.user._id;
     attendance.markedAt = new Date();
-    
+
     if (checkInTime) {
       attendance.checkInTime = new Date(checkInTime);
-      
+
       // Calculate late minutes if check-in time is after start time
       const school = await School.findById(attendance.school);
       if (school && school.settings.attendanceStartTime) {
@@ -423,7 +406,7 @@ const updateAttendance = async (req, res) => {
         const checkIn = attendance.checkInTime;
         const startTime = new Date(checkIn);
         startTime.setHours(startHour, startMinute, 0, 0);
-        
+
         if (checkIn > startTime) {
           const lateMs = checkIn - startTime;
           attendance.lateMinutes = Math.round(lateMs / (1000 * 60));

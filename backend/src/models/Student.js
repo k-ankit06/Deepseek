@@ -4,7 +4,6 @@ const studentSchema = new mongoose.Schema({
   rollNumber: {
     type: String,
     required: [true, 'Please add roll number'],
-    unique: true,
   },
   firstName: {
     type: String,
@@ -17,31 +16,21 @@ const studentSchema = new mongoose.Schema({
   },
   dateOfBirth: {
     type: Date,
-    required: [true, 'Please add date of birth'],
   },
   gender: {
     type: String,
-    enum: ['Male', 'Female', 'Other'],
-    required: true,
   },
   parentName: {
     type: String,
-    required: [true, 'Please add parent/guardian name'],
   },
   parentPhone: {
     type: String,
-    required: [true, 'Please add parent phone number'],
   },
   address: {
-    street: String,
-    village: String,
-    district: String,
-    state: String,
-    pincode: String,
+    type: String,
   },
   aadhaarNumber: {
     type: String,
-    unique: true,
     sparse: true,
   },
   class: {

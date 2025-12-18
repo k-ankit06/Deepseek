@@ -1,56 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  User, 
-  Calendar, 
-  Users, 
-  TrendingUp, 
+import { useNavigate } from 'react-router-dom';
+import {
+  User,
+  Calendar,
+  Users,
+  TrendingUp,
   Camera,
   BookOpen,
   Bell,
   Clock,
   CheckCircle,
   BarChart3,
-  MessageSquare
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { useAuth } from '../components/auth/ProtectedRoute';
-import { ClassSelector } from '../components/teacher';
+import { apiMethods } from '../utils/api';
 
 const TeacherDashboard = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const [selectedClass, setSelectedClass] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [classes, setClasses] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    totalClasses: 0,
+    todayPresent: 0,
+    attendanceRate: 0
+  });
 
-  // Stats data
-  const stats = [
-    { title: 'Total Students', value: '42', icon: Users, color: 'blue', change: '+2' },
-    { title: 'Today Present', value: '38', icon: CheckCircle, color: 'green', change: '94%' },
-    { title: 'Classes Today', value: '3', icon: BookOpen, color: 'purple', change: 'All Done' },
-    { title: 'Pending Tasks', value: '2', icon: Bell, color: 'orange', change: '-1' },
-  ];
+  // Fetch data on mount
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  // Today's schedule
-  const todaysSchedule = [
-    { time: '09:00 AM', class: 'Class 1 - A', subject: 'Mathematics', status: 'completed' },
-    { time: '10:30 AM', class: 'Class 2 - B', subject: 'Science', status: 'upcoming' },
-    { time: '12:00 PM', class: 'Class 3 - A', subject: 'English', status: 'upcoming' },
-    { time: '02:00 PM', class: 'Class 4 - C', subject: 'Social Studies', status: 'later' },
-  ];
+  const fetchData = async () => {
+    setIsLoading(true);
+
+    let classesData = [];
+    let studentsData = [];
+
+    try {
+      // Fetch classes
+      const classesRes = await apiMethods.getClasses();
+      if (classesRes?.data) {
+        classesData = classesRes.data;
+        setClasses(classesData);
+      }
+    } catch (e) {
+      console.log('Could not fetch classes');
+    }
+
+    try {
+      // Fetch students
+      const studentsRes = await apiMethods.getStudents();
+      if (studentsRes?.data) {
+        studentsData = studentsRes.data.students || studentsRes.data || [];
+        setStudents(studentsData);
+      }
+    } catch (e) {
+      console.log('Could not fetch students');
+    }
+
+    setStats({
+      totalStudents: studentsData.length,
+      totalClasses: classesData.length,
+      todayPresent: 0,
+      attendanceRate: 0
+    });
+
+    setIsLoading(false);
+  };
 
   // Quick actions
   const quickActions = [
     { title: 'Take Attendance', icon: Camera, color: 'from-blue-500 to-cyan-500', path: '/attendance' },
-    { title: 'View Reports', icon: BarChart3, color: 'from-green-500 to-emerald-500', path: '/reports' },
-    { title: 'Message Parents', icon: MessageSquare, color: 'from-purple-500 to-pink-500', path: '/messages' },
-    { title: 'View Schedule', icon: Calendar, color: 'from-orange-500 to-amber-500', path: '/schedule' },
-  ];
-
-  // Recent attendance
-  const recentAttendance = [
-    { class: 'Class 1 - A', date: 'Today', present: 38, absent: 4, rate: '90%' },
-    { class: 'Class 2 - B', date: 'Yesterday', present: 40, absent: 2, rate: '95%' },
-    { class: 'Class 3 - A', date: 'Jan 19', present: 35, absent: 5, rate: '88%' },
+    { title: 'View Students', icon: Users, color: 'from-green-500 to-emerald-500', path: '/students' },
+    { title: 'View Reports', icon: BarChart3, color: 'from-purple-500 to-pink-500', path: '/reports' },
+    { title: 'View Calendar', icon: Calendar, color: 'from-orange-500 to-amber-500', path: '/attendance' },
   ];
 
   return (
@@ -72,211 +103,204 @@ const TeacherDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" icon={Bell}>Notifications</Button>
-            <Button variant="primary" icon={Camera} onClick={() => window.location.href = '/attendance'}>
+            <Button
+              variant="primary"
+              icon={Camera}
+              onClick={() => navigate('/attendance')}
+            >
               Take Attendance
             </Button>
           </div>
         </div>
       </motion.div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <Card className="p-5 hover-lift">
+      {/* Loading State */}
+      {isLoading ? (
+        <Card className="p-12 text-center">
+          <Loader2 className="animate-spin mx-auto text-blue-500 mb-4" size={48} />
+          <p className="text-gray-600">Loading dashboard...</p>
+        </Card>
+      ) : (
+        <>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <Card className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-xl bg-${stat.color}-100`}>
-                  <stat.icon className={`text-${stat.color}-600`} size={22} />
+                <div className="p-3 rounded-xl bg-blue-100">
+                  <Users className="text-blue-600" size={22} />
                 </div>
-                <span className="text-sm font-medium text-green-600">{stat.change}</span>
               </div>
-              <div className="text-2xl font-bold text-gray-800">{stat.value}</div>
-              <div className="text-sm text-gray-600 mt-1">{stat.title}</div>
+              <div className="text-2xl font-bold text-gray-800">{stats.totalStudents}</div>
+              <div className="text-sm text-gray-600 mt-1">Total Students</div>
+            </Card>
+
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 rounded-xl bg-green-100">
+                  <BookOpen className="text-green-600" size={22} />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-gray-800">{stats.totalClasses}</div>
+              <div className="text-sm text-gray-600 mt-1">Total Classes</div>
+            </Card>
+
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 rounded-xl bg-purple-100">
+                  <CheckCircle className="text-purple-600" size={22} />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-gray-800">{stats.todayPresent}</div>
+              <div className="text-sm text-gray-600 mt-1">Present Today</div>
+            </Card>
+
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 rounded-xl bg-orange-100">
+                  <TrendingUp className="text-orange-600" size={22} />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-gray-800">{stats.attendanceRate}%</div>
+              <div className="text-sm text-gray-600 mt-1">Attendance Rate</div>
+            </Card>
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid lg:grid-cols-3 gap-6 mb-8">
+            {/* Quick Actions */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="lg:col-span-2"
+            >
+              <Card className="p-6">
+                <h2 className="text-xl font-bold text-gray-800 mb-6">Quick Actions</h2>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {quickActions.map((action, index) => (
+                    <motion.div
+                      key={index}
+                      whileHover={{ y: -5 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`bg-gradient-to-br ${action.color} rounded-2xl p-5 text-white cursor-pointer shadow-lg hover:shadow-xl transition-all`}
+                      onClick={() => navigate(action.path)}
+                    >
+                      <action.icon size={24} className="mb-3" />
+                      <h3 className="font-semibold text-lg">{action.title}</h3>
+                      <p className="text-white/80 text-sm mt-2">Click to get started</p>
+                    </motion.div>
+                  ))}
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* My Classes */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+            >
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                    <BookOpen className="mr-2" size={20} />
+                    My Classes
+                  </h2>
+                </div>
+
+                {classes.length > 0 ? (
+                  <div className="space-y-3">
+                    {classes.slice(0, 5).map((cls, index) => (
+                      <div key={cls._id || index} className="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mr-3">
+                          <span className="text-white font-bold text-sm">
+                            {cls.grade || cls.name?.charAt(0) || 'C'}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800">
+                            {cls.name || `Class ${cls.grade}`}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Section {cls.section} • {cls.studentCount || 0} students
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <AlertCircle className="mx-auto text-gray-400 mb-3" size={32} />
+                    <p className="text-gray-600">No classes assigned yet</p>
+                  </div>
+                )}
+              </Card>
+            </motion.div>
+          </div>
+
+          {/* Students List */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-800">Recent Students</h2>
+                <Button variant="outline" size="sm" onClick={() => navigate('/students')}>
+                  View All
+                </Button>
+              </div>
+
+              {students.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="p-3 text-left">Roll No</th>
+                        <th className="p-3 text-left">Name</th>
+                        <th className="p-3 text-left">Class</th>
+                        <th className="p-3 text-left">Face Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {students.slice(0, 5).map((student) => (
+                        <tr key={student._id} className="border-t hover:bg-gray-50">
+                          <td className="p-3 font-medium">{student.rollNumber}</td>
+                          <td className="p-3">
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mr-2">
+                                <span className="text-white text-sm font-medium">
+                                  {(student.firstName || 'S').charAt(0)}
+                                </span>
+                              </div>
+                              {student.firstName} {student.lastName}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            {student.class?.name || student.class?.grade || 'N/A'} - {student.class?.section || 'N/A'}
+                          </td>
+                          <td className="p-3">
+                            <span className={`px-2 py-1 rounded-full text-xs ${student.faceRegistered
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                              {student.faceRegistered ? 'Registered' : 'Pending'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Users className="mx-auto text-gray-400 mb-3" size={32} />
+                  <p className="text-gray-600">No students found</p>
+                  <p className="text-sm text-gray-500">Students will appear here when added by admin</p>
+                </div>
+              )}
             </Card>
           </motion.div>
-        ))}
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-6 mb-8">
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="lg:col-span-2"
-        >
-          <Card className="p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-6">Quick Actions</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {quickActions.map((action, index) => (
-                <motion.div
-                  key={index}
-                  whileHover={{ y: -5 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`bg-gradient-to-br ${action.color} rounded-2xl p-5 text-white cursor-pointer shadow-lg hover:shadow-xl transition-all`}
-                  onClick={() => window.location.href = action.path}
-                >
-                  <action.icon size={24} className="mb-3" />
-                  <h3 className="font-semibold text-lg">{action.title}</h3>
-                  <p className="text-white/80 text-sm mt-2">Click to get started</p>
-                </motion.div>
-              ))}
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Today's Schedule */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-        >
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-800 flex items-center">
-                <Clock className="mr-2" size={20} />
-                Today's Schedule
-              </h2>
-              <span className="text-sm text-gray-500">Updated now</span>
-            </div>
-            
-            <div className="space-y-4">
-              {todaysSchedule.map((item, index) => (
-                <div key={index} className="flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className={`w-3 h-3 rounded-full mt-2 mr-3 ${
-                    item.status === 'completed' ? 'bg-green-500' :
-                    item.status === 'upcoming' ? 'bg-blue-500' : 'bg-gray-400'
-                  }`}></div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-800">{item.class}</div>
-                    <div className="text-sm text-gray-600">{item.subject}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium">{item.time}</div>
-                    <div className={`text-xs px-2 py-1 rounded-full mt-1 ${
-                      item.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      item.status === 'upcoming' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {item.status}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Recent Attendance */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <Card className="p-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-6">Recent Attendance</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="p-3 text-left">Class</th>
-                  <th className="p-3 text-left">Date</th>
-                  <th className="p-3 text-left">Present</th>
-                  <th className="p-3 text-left">Absent</th>
-                  <th className="p-3 text-left">Rate</th>
-                  <th className="p-3 text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentAttendance.map((record, index) => (
-                  <tr key={index} className="border-t hover:bg-gray-50">
-                    <td className="p-3 font-medium">{record.class}</td>
-                    <td className="p-3">{record.date}</td>
-                    <td className="p-3">
-                      <div className="flex items-center">
-                        <CheckCircle className="text-green-500 mr-2" size={16} />
-                        {record.present}
-                      </div>
-                    </td>
-                    <td className="p-3">{record.absent}</td>
-                    <td className="p-3">
-                      <div className="flex items-center">
-                        <div className="w-16 h-2 bg-gray-200 rounded-full mr-2">
-                          <div 
-                            className="h-full bg-green-500 rounded-full"
-                            style={{ width: record.rate }}
-                          />
-                        </div>
-                        {record.rate}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <Button size="sm" variant="outline">
-                        View Details
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </motion.div>
-
-      {/* Class Selector */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <ClassSelector 
-          onSelectClass={setSelectedClass}
-          showActions={true}
-        />
-      </motion.div>
-
-      {/* Performance Chart */}
-      <div className="grid md:grid-cols-2 gap-6 mt-8">
-        <Card className="p-6">
-          <h3 className="font-bold text-gray-800 mb-4">Weekly Performance</h3>
-          <div className="h-48 flex items-end gap-2">
-            {[85, 88, 90, 92, 94, 95, 93].map((value, index) => (
-              <div key={index} className="flex-1 flex flex-col items-center">
-                <div 
-                  className="w-full bg-gradient-to-t from-blue-500 to-cyan-300 rounded-t-lg"
-                  style={{ height: `${value}%` }}
-                />
-                <div className="text-xs mt-2">Day {index + 1}</div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <h3 className="font-bold text-gray-800 mb-4">Quick Links</h3>
-          <div className="space-y-3">
-            {[
-              { title: 'Student Progress Reports', icon: TrendingUp },
-              { title: 'Parent Communication', icon: MessageSquare },
-              { title: 'Lesson Plans', icon: BookOpen },
-              { title: 'Attendance History', icon: Calendar },
-            ].map((link, index) => (
-              <button
-                key={index}
-                className="w-full p-3 flex items-center hover:bg-gray-50 rounded-lg transition-colors"
-                onClick={() => window.location.href = `/${link.title.toLowerCase().replace(' ', '-')}`}
-              >
-                <link.icon className="text-blue-600 mr-3" size={20} />
-                <span className="font-medium">{link.title}</span>
-              </button>
-            ))}
-          </div>
-        </Card>
-      </div>
+        </>
+      )}
     </div>
   );
 };

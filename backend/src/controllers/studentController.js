@@ -13,9 +13,13 @@ const getStudents = async (req, res) => {
     const { page = 1, limit = 50, class: classId, section, search, isActive = true } = req.query;
 
     const searchCriteria = {
-      school: schoolId,
       isActive: isActive === 'true' || isActive === true,
     };
+
+    // Only filter by school if user has one (demo mode might not)
+    if (schoolId) {
+      searchCriteria.school = schoolId;
+    }
 
     if (classId) {
       searchCriteria.class = classId;
@@ -35,7 +39,7 @@ const getStudents = async (req, res) => {
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
     const students = await Student.find(searchCriteria)
       .populate('class', 'name grade section')
       .skip(skip)
@@ -83,8 +87,16 @@ const registerStudent = async (req, res) => {
       midDayMealEligible,
     } = req.body;
 
-    // Get school from user
-    const schoolId = req.user.school;
+    // Get school from user or find first school (demo mode)
+    let schoolId = req.user.school;
+
+    if (!schoolId) {
+      // Demo mode - find first school
+      const firstSchool = await School.findOne();
+      if (firstSchool) {
+        schoolId = firstSchool._id;
+      }
+    }
 
     // Check if roll number already exists in the school
     const existingStudent = await Student.findOne({
@@ -99,17 +111,30 @@ const registerStudent = async (req, res) => {
       });
     }
 
-    // Check if class exists and belongs to the same school
-    const studentClass = await Class.findOne({
-      _id: classId,
-      school: schoolId,
-    });
+    // Find the class - in demo mode, don't require school match
+    let studentClass;
+    if (schoolId) {
+      studentClass = await Class.findOne({
+        _id: classId,
+        school: schoolId,
+      });
+    }
+
+    // If not found with school, try finding just by ID
+    if (!studentClass) {
+      studentClass = await Class.findById(classId);
+    }
 
     if (!studentClass) {
       return res.status(404).json({
         success: false,
-        message: 'Class not found or not authorized',
+        message: 'Class not found',
       });
+    }
+
+    // Use the class's school if we don't have one
+    if (!schoolId && studentClass.school) {
+      schoolId = studentClass.school;
     }
 
     // Create student
@@ -117,11 +142,11 @@ const registerStudent = async (req, res) => {
       rollNumber,
       firstName,
       lastName,
-      dateOfBirth: new Date(dateOfBirth),
-      gender,
-      parentName,
-      parentPhone,
-      address,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+      gender: gender || 'Male',
+      parentName: parentName || '',
+      parentPhone: parentPhone || '',
+      address: address || '',
       aadhaarNumber,
       class: classId,
       school: schoolId,
@@ -129,13 +154,15 @@ const registerStudent = async (req, res) => {
     });
 
     // Update class student count
-    studentClass.studentCount += 1;
+    studentClass.studentCount = (studentClass.studentCount || 0) + 1;
     await studentClass.save();
 
     // Update school total students
-    await School.findByIdAndUpdate(schoolId, {
-      $inc: { totalStudents: 1 },
-    });
+    if (schoolId) {
+      await School.findByIdAndUpdate(schoolId, {
+        $inc: { totalStudents: 1 },
+      });
+    }
 
     res.status(201).json({
       success: true,
