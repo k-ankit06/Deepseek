@@ -1,29 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Download, Users, CheckCircle, XCircle } from 'lucide-react';
 import Card from '../common/Card';
 import Button from '../common/Button';
+import { apiMethods } from '../../utils/api';
 
 const DailyAttendance = () => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedClass, setSelectedClass] = useState('Class 1');
+  const [selectedClass, setSelectedClass] = useState('');
+  const [classes, setClasses] = useState([]);
+  const [attendanceData, setAttendanceData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Sample data
-  const attendanceData = [
-    { id: 1, name: 'Ramesh Kumar', roll: 1, status: 'present', time: '9:00 AM' },
-    { id: 2, name: 'Sita Devi', roll: 2, status: 'present', time: '9:01 AM' },
-    { id: 3, name: 'Ajay Singh', roll: 3, status: 'absent', time: '-' },
-    { id: 4, name: 'Priya Sharma', roll: 4, status: 'present', time: '9:02 AM' },
-  ];
+  // Fetch classes on mount
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  // Fetch attendance when date or class changes
+  useEffect(() => {
+    fetchAttendance();
+  }, [date, selectedClass]);
+
+  const fetchClasses = async () => {
+    try {
+      const response = await apiMethods.getClasses();
+      if (response.success && response.data) {
+        setClasses(response.data);
+        if (response.data.length > 0) {
+          setSelectedClass(response.data[0]._id);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+    }
+  };
+
+  const fetchAttendance = async () => {
+    if (!date) return;
+    setIsLoading(true);
+    try {
+      const response = await apiMethods.getDailyAttendance({ date, classId: selectedClass || undefined });
+      if (response.success && response.data) {
+        const records = Array.isArray(response.data) ? response.data : [];
+        setAttendanceData(records.map(r => ({
+          id: r._id,
+          name: r.student?.firstName ? `${r.student.firstName} ${r.student.lastName || ''}` : 'Unknown',
+          roll: r.student?.rollNumber || '-',
+          status: r.status || 'absent',
+          time: r.createdAt ? new Date(r.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-'
+        })));
+      } else {
+        setAttendanceData([]);
+      }
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+      setAttendanceData([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const stats = {
     total: attendanceData.length,
     present: attendanceData.filter(s => s.status === 'present').length,
     absent: attendanceData.filter(s => s.status === 'absent').length,
-    rate: Math.round((attendanceData.filter(s => s.status === 'present').length / attendanceData.length) * 100)
+    rate: attendanceData.length > 0 ? Math.round((attendanceData.filter(s => s.status === 'present').length / attendanceData.length) * 100) : 0
   };
 
   const handleExport = () => {
-    alert('Report downloaded successfully!');
+    if (attendanceData.length === 0) {
+      alert('No data to export');
+      return;
+    }
+    const csv = [
+      ['Roll No', 'Name', 'Status', 'Time'],
+      ...attendanceData.map(s => [s.roll, s.name, s.status, s.time])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance_${date}.csv`;
+    a.click();
   };
 
   return (
@@ -52,8 +111,9 @@ const DailyAttendance = () => {
               onChange={(e) => setSelectedClass(e.target.value)}
               className="w-full p-2 border rounded-lg"
             >
-              {['Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5'].map(cls => (
-                <option key={cls} value={cls}>{cls}</option>
+              <option value="">All Classes</option>
+              {classes.map(cls => (
+                <option key={cls._id} value={cls._id}>{cls.name}</option>
               ))}
             </select>
           </div>
@@ -88,39 +148,44 @@ const DailyAttendance = () => {
       {/* Attendance List */}
       <Card>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="p-3 text-left">Roll No</th>
-                <th className="p-3 text-left">Student Name</th>
-                <th className="p-3 text-left">Status</th>
-                <th className="p-3 text-left">Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attendanceData.map(student => (
-                <tr key={student.id} className="border-t">
-                  <td className="p-3">{student.roll}</td>
-                  <td className="p-3">{student.name}</td>
-                  <td className="p-3">
-                    <div className={`inline-flex items-center px-3 py-1 rounded-full ${
-                      student.status === 'present' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {student.status === 'present' ? (
-                        <CheckCircle size={14} className="mr-1" />
-                      ) : (
-                        <XCircle size={14} className="mr-1" />
-                      )}
-                      {student.status}
-                    </div>
-                  </td>
-                  <td className="p-3">{student.time}</td>
+          {isLoading ? (
+            <div className="text-center py-8 text-gray-500">Loading...</div>
+          ) : attendanceData.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">No attendance records found for this date</div>
+          ) : (
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="p-3 text-left">Roll No</th>
+                  <th className="p-3 text-left">Student Name</th>
+                  <th className="p-3 text-left">Status</th>
+                  <th className="p-3 text-left">Time</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {attendanceData.map(student => (
+                  <tr key={student.id} className="border-t">
+                    <td className="p-3">{student.roll}</td>
+                    <td className="p-3">{student.name}</td>
+                    <td className="p-3">
+                      <div className={`inline-flex items-center px-3 py-1 rounded-full ${student.status === 'present'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                        }`}>
+                        {student.status === 'present' ? (
+                          <CheckCircle size={14} className="mr-1" />
+                        ) : (
+                          <XCircle size={14} className="mr-1" />
+                        )}
+                        {student.status}
+                      </div>
+                    </td>
+                    <td className="p-3">{student.time}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </Card>
     </div>

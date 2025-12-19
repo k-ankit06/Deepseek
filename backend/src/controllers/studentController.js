@@ -87,16 +87,8 @@ const registerStudent = async (req, res) => {
       midDayMealEligible,
     } = req.body;
 
-    // Get school from user or find first school (demo mode)
+    // Get school from logged-in user (required for data isolation)
     let schoolId = req.user.school;
-
-    if (!schoolId) {
-      // Demo mode - find first school
-      const firstSchool = await School.findOne();
-      if (firstSchool) {
-        schoolId = firstSchool._id;
-      }
-    }
 
     // Check if roll number already exists in the school
     const existingStudent = await Student.findOne({

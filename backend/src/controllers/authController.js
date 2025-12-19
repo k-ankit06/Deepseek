@@ -176,7 +176,7 @@ const register = async (req, res) => {
 // @access  Public
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, schoolCode } = req.body;
 
     // Validate email & password
     if (!email || !password) {
@@ -202,6 +202,24 @@ const login = async (req, res) => {
         success: false,
         message: 'User account is deactivated',
       });
+    }
+
+    // For teachers, validate school code
+    if (user.role === 'teacher' && user.school) {
+      if (!schoolCode) {
+        return res.status(400).json({
+          success: false,
+          message: 'School code is required for teacher login',
+        });
+      }
+
+      // Check if school code matches
+      if (user.school.code !== schoolCode.toUpperCase()) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid school code for this account',
+        });
+      }
     }
 
     // Check password

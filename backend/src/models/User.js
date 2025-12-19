@@ -10,7 +10,6 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: [true, 'Please add an email'],
-    unique: true,
     lowercase: true,
     match: [
       /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
@@ -35,7 +34,7 @@ const userSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: [true, 'Please add a phone number'],
+    default: '',
   },
   isActive: {
     type: Boolean,
@@ -49,6 +48,9 @@ const userSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
+// Compound index - email must be unique within each school
+userSchema.index({ email: 1, school: 1 }, { unique: true });
 
 // Encrypt password using bcrypt
 userSchema.pre('save', async function (next) {

@@ -14,7 +14,6 @@ const attendanceSchema = new mongoose.Schema({
   school: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'School',
-    required: true,
   },
   date: {
     type: Date,
@@ -28,7 +27,6 @@ const attendanceSchema = new mongoose.Schema({
   markedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
   },
   markedAt: {
     type: Date,
@@ -42,7 +40,7 @@ const attendanceSchema = new mongoose.Schema({
   confidenceScore: {
     type: Number,
     min: 0,
-    max: 1,
+    max: 100, // Accept 0-100 percentage
   },
   checkInTime: {
     type: Date,

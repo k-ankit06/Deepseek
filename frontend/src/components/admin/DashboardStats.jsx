@@ -1,45 +1,64 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, BookOpen, UserCheck, TrendingUp, Calendar, Activity } from 'lucide-react';
 import Card from '../common/Card';
+import { apiMethods } from '../../utils/api';
 
 const DashboardStats = () => {
-  const stats = [
-    { 
-      title: 'Total Students', 
-      value: '256', 
-      icon: Users, 
-      color: 'bg-blue-500',
-      change: '+12%'
-    },
-    { 
-      title: 'Total Classes', 
-      value: '12', 
-      icon: BookOpen, 
-      color: 'bg-green-500',
-      change: '+2'
-    },
-    { 
-      title: 'Active Teachers', 
-      value: '8', 
-      icon: UserCheck, 
-      color: 'bg-purple-500',
-      change: 'All Active'
-    },
-    { 
-      title: 'Today\'s Attendance', 
-      value: '94%', 
-      icon: TrendingUp, 
-      color: 'bg-yellow-500',
-      change: '+3%'
-    },
-  ];
+  const [stats, setStats] = useState([
+    { title: 'Total Students', value: '0', icon: Users, color: 'bg-blue-500', change: '' },
+    { title: 'Total Classes', value: '0', icon: BookOpen, color: 'bg-green-500', change: '' },
+    { title: 'Active Teachers', value: '0', icon: UserCheck, color: 'bg-purple-500', change: '' },
+    { title: 'Today\'s Attendance', value: '0%', icon: TrendingUp, color: 'bg-yellow-500', change: '' },
+  ]);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const recentActivity = [
-    { time: '10:30 AM', activity: 'Class 3 attendance marked', user: 'Teacher Priya' },
-    { time: '9:45 AM', action: '2 new students registered', user: 'Teacher Raj' },
-    { time: 'Yesterday', activity: 'Monthly report generated', user: 'System' },
-    { time: 'Jan 19', activity: 'Class 4 added', user: 'Admin' },
-  ];
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    setIsLoading(true);
+    let studentCount = 0;
+    let classCount = 0;
+    let teacherCount = 0;
+    let attendanceRate = 0;
+
+    try {
+      const studentsRes = await apiMethods.getStudents();
+      studentCount = studentsRes?.data?.students?.length || studentsRes?.data?.length || 0;
+    } catch (e) { }
+
+    try {
+      const classesRes = await apiMethods.getClasses();
+      classCount = classesRes?.data?.length || 0;
+    } catch (e) { }
+
+    try {
+      const usersRes = await apiMethods.getUsers();
+      teacherCount = usersRes?.data?.filter(u => u.role === 'teacher')?.length || 0;
+    } catch (e) { }
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const attendanceRes = await apiMethods.getDailyAttendance({ date: today });
+      if (attendanceRes?.data && Array.isArray(attendanceRes.data)) {
+        const present = attendanceRes.data.filter(a => a.status === 'present').length;
+        const total = attendanceRes.data.length;
+        attendanceRate = total > 0 ? Math.round((present / total) * 100) : 0;
+      }
+    } catch (e) { }
+
+    setStats([
+      { title: 'Total Students', value: studentCount.toString(), icon: Users, color: 'bg-blue-500', change: '' },
+      { title: 'Total Classes', value: classCount.toString(), icon: BookOpen, color: 'bg-green-500', change: '' },
+      { title: 'Active Teachers', value: teacherCount.toString(), icon: UserCheck, color: 'bg-purple-500', change: '' },
+      { title: 'Today\'s Attendance', value: `${attendanceRate}%`, icon: TrendingUp, color: 'bg-yellow-500', change: '' },
+    ]);
+
+    setRecentActivity([]); // Real activity would come from API
+    setIsLoading(false);
+  };
 
   return (
     <div className="max-w-6xl mx-auto p-4">
@@ -53,9 +72,9 @@ const DashboardStats = () => {
               <div className={`p-2 rounded-lg ${stat.color} bg-opacity-10`}>
                 <stat.icon className={`${stat.color.replace('bg-', 'text-')}`} />
               </div>
-              <span className="text-sm text-green-600">{stat.change}</span>
+              {stat.change && <span className="text-sm text-green-600">{stat.change}</span>}
             </div>
-            <div className="text-2xl font-bold">{stat.value}</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : stat.value}</div>
             <div className="text-sm text-gray-600">{stat.title}</div>
           </Card>
         ))}
@@ -67,20 +86,24 @@ const DashboardStats = () => {
           <h3 className="font-bold mb-4 flex items-center">
             <Activity className="mr-2" /> Recent Activity
           </h3>
-          <div className="space-y-3">
-            {recentActivity.map((item, index) => (
-              <div key={index} className="flex items-start border-b pb-3 last:border-0">
-                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
-                  <Calendar size={18} className="text-gray-500" />
+          {recentActivity.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">No recent activity</div>
+          ) : (
+            <div className="space-y-3">
+              {recentActivity.map((item, index) => (
+                <div key={index} className="flex items-start border-b pb-3 last:border-0">
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
+                    <Calendar size={18} className="text-gray-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium">{item.activity}</div>
+                    <div className="text-sm text-gray-600">{item.user}</div>
+                  </div>
+                  <div className="text-sm text-gray-500">{item.time}</div>
                 </div>
-                <div className="flex-1">
-                  <div className="font-medium">{item.activity}</div>
-                  <div className="text-sm text-gray-600">{item.user}</div>
-                </div>
-                <div className="text-sm text-gray-500">{item.time}</div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
 
         {/* Quick Actions */}
@@ -103,19 +126,11 @@ const DashboardStats = () => {
         </Card>
       </div>
 
-      {/* Attendance Chart */}
+      {/* No fake chart - show message */}
       <Card className="mt-6 p-4">
         <h3 className="font-bold mb-4">Weekly Attendance Trend</h3>
-        <div className="flex items-end h-32 gap-2">
-          {[80, 85, 90, 92, 94, 96, 95].map((value, index) => (
-            <div key={index} className="flex-1 flex flex-col items-center">
-              <div 
-                className="w-full bg-blue-500 rounded-t-lg"
-                style={{ height: `${value}%` }}
-              />
-              <div className="text-xs mt-1">Day {index + 1}</div>
-            </div>
-          ))}
+        <div className="text-center text-gray-500 py-8">
+          Chart data will appear when attendance records are available
         </div>
       </Card>
     </div>

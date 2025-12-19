@@ -123,6 +123,7 @@ export const apiMethods = {
   registerFace: (studentId, image) => api.post(`/students/${studentId}/face`, { image }),
 
   // Attendance
+  markAttendance: (data) => api.post('/attendance/mark', data),
   captureAttendance: (data) => api.post('/attendance/capture', data),
   getDailyAttendance: (params) => api.get('/attendance/daily', { params }),
   getMonthlyAttendance: (params) => api.get('/attendance/monthly', { params }),

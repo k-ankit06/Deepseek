@@ -11,46 +11,68 @@ import {
   Sparkles,
   CheckCircle,
   Wifi,
-  Camera
+  Camera,
+  Hash
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import { apiMethods } from '../utils/api';
+import toast from 'react-hot-toast';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [userType, setUserType] = useState('teacher');
+  const [isLoading, setIsLoading] = useState(false);
   const [credentials, setCredentials] = useState({
     email: '',
-    password: ''
+    password: '',
+    schoolCode: ''
   });
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
 
-    // Demo authentication
-    if (credentials.email && credentials.password) {
-      const userData = {
-        id: '1',
-        name: userType === 'admin' ? 'Admin User' : 'Teacher User',
+    try {
+      // For teacher login, school code is required
+      if (userType === 'teacher' && !credentials.schoolCode) {
+        toast.error('School code is required for teacher login');
+        setIsLoading(false);
+        return;
+      }
+
+      const loginData = {
         email: credentials.email,
-        role: userType,
-        school: 'Rural Primary School',
-        avatar: '👨‍🏫'
+        password: credentials.password,
+        ...(userType === 'teacher' && { schoolCode: credentials.schoolCode })
       };
 
-      // Save to localStorage first
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('token', 'demo_token_123');
+      const response = await apiMethods.login(loginData);
 
-      // Use window.location for reliable redirect
-      if (userType === 'admin') {
-        window.location.href = '/admin';
+      if (response.success) {
+        const userData = response.data?.user || response.data;
+        const token = response.data?.token || response.token;
+
+        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('token', token);
+
+        toast.success('Login successful!');
+
+        // Redirect based on role
+        if (userData.role === 'admin' || userType === 'admin') {
+          window.location.href = '/admin';
+        } else {
+          window.location.href = '/teacher';
+        }
       } else {
-        window.location.href = '/teacher';
+        toast.error(response.message || 'Invalid credentials');
       }
-    } else {
-      alert('Please enter email and password');
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error(error.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -170,6 +192,27 @@ const LoginPage = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* School Code Field - Only for Teacher */}
+                {userType === 'teacher' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      School Code *
+                    </label>
+                    <div className="relative">
+                      <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                      <input
+                        type="text"
+                        placeholder="Enter school code (e.g., SCH001)"
+                        value={credentials.schoolCode}
+                        onChange={(e) => setCredentials({ ...credentials, schoolCode: e.target.value.toUpperCase() })}
+                        className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all uppercase"
+                        required
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Ask your school administrator for the code</p>
+                  </div>
+                )}
 
                 {/* Remember & Forgot */}
                 <div className="flex items-center justify-between">

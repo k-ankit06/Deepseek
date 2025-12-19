@@ -9,14 +9,12 @@ const { asyncHandler } = require('../middleware/errorMiddleware');
  * @access  Private
  */
 const getClasses = asyncHandler(async (req, res) => {
-  // Teachers can only see classes from their school
-  // Admins can see all classes if they specify a school
+  // Always filter by user's school for data isolation
   const filter = {};
 
-  if (req.user.role === 'teacher') {
+  // If user has a school, always filter by it
+  if (req.user.school) {
     filter.school = req.user.school;
-  } else if (req.user.role === 'admin' && req.query.schoolId) {
-    filter.school = req.query.schoolId;
   }
 
   const classes = await Class.find(filter)

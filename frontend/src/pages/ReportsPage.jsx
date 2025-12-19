@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  BarChart3, 
-  Download, 
-  Filter, 
+import {
+  BarChart3,
+  Download,
+  Filter,
   Calendar,
   FileText,
   PieChart,
@@ -13,6 +13,7 @@ import {
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { DailyAttendance, MonthlySummary, ReportExporter, StudentHistory } from '../components/reports';
+import { apiMethods } from '../utils/api';
 
 const ReportsPage = () => {
   const [activeTab, setActiveTab] = useState('daily');
@@ -20,14 +21,41 @@ const ReportsPage = () => {
     start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
   });
+  const [reportStats, setReportStats] = useState([
+    { title: 'Total Reports', value: '0', icon: FileText, color: 'blue' },
+    { title: 'Generated Today', value: '0', icon: BarChart3, color: 'green' },
+    { title: 'Pending Review', value: '0', icon: Calendar, color: 'orange' },
+    { title: 'Avg. Accuracy', value: '0%', icon: TrendingUp, color: 'purple' },
+  ]);
 
-  // Report stats
-  const reportStats = [
-    { title: 'Total Reports', value: '24', icon: FileText, color: 'blue' },
-    { title: 'Generated Today', value: '3', icon: BarChart3, color: 'green' },
-    { title: 'Pending Review', value: '2', icon: Calendar, color: 'orange' },
-    { title: 'Avg. Accuracy', value: '98%', icon: TrendingUp, color: 'purple' },
-  ];
+  // Fetch real report stats
+  useEffect(() => {
+    fetchReportStats();
+  }, []);
+
+  const fetchReportStats = async () => {
+    try {
+      // Get today's attendance for stats
+      const today = new Date().toISOString().split('T')[0];
+      const response = await apiMethods.getDailyAttendance({ date: today });
+
+      if (response.success && response.data) {
+        const records = Array.isArray(response.data) ? response.data : [];
+        const present = records.filter(r => r.status === 'present').length;
+        const total = records.length;
+        const accuracy = total > 0 ? Math.round((present / total) * 100) : 0;
+
+        setReportStats([
+          { title: 'Total Records', value: total.toString(), icon: FileText, color: 'blue' },
+          { title: 'Present Today', value: present.toString(), icon: BarChart3, color: 'green' },
+          { title: 'Absent Today', value: (total - present).toString(), icon: Calendar, color: 'orange' },
+          { title: 'Attendance Rate', value: `${accuracy}%`, icon: TrendingUp, color: 'purple' },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching report stats:', error);
+    }
+  };
 
   // Report templates
   const reportTemplates = [
@@ -88,7 +116,7 @@ const ReportsPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
           >
-            <Card 
+            <Card
               className="p-5 text-center cursor-pointer hover-lift"
               onClick={() => setActiveTab(template.name.toLowerCase().replace(' ', '-').split('-')[0])}
             >
@@ -111,7 +139,7 @@ const ReportsPage = () => {
               <input
                 type="date"
                 value={dateRange.start}
-                onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
+                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
                 className="w-full p-2 border rounded-lg"
               />
             </div>
@@ -120,7 +148,7 @@ const ReportsPage = () => {
               <input
                 type="date"
                 value={dateRange.end}
-                onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
+                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
                 className="w-full p-2 border rounded-lg"
               />
             </div>
@@ -140,33 +168,30 @@ const ReportsPage = () => {
       <div className="flex border-b mb-6">
         <button
           onClick={() => setActiveTab('daily')}
-          className={`px-6 py-3 font-medium border-b-2 transition-all ${
-            activeTab === 'daily'
+          className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'daily'
               ? 'border-blue-500 text-blue-600'
               : 'border-transparent text-gray-600 hover:text-gray-900'
-          }`}
+            }`}
         >
           <Calendar className="inline mr-2" size={18} />
           Daily Attendance
         </button>
         <button
           onClick={() => setActiveTab('monthly')}
-          className={`px-6 py-3 font-medium border-b-2 transition-all ${
-            activeTab === 'monthly'
+          className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'monthly'
               ? 'border-blue-500 text-blue-600'
               : 'border-transparent text-gray-600 hover:text-gray-900'
-          }`}
+            }`}
         >
           <PieChart className="inline mr-2" size={18} />
           Monthly Summary
         </button>
         <button
           onClick={() => setActiveTab('student')}
-          className={`px-6 py-3 font-medium border-b-2 transition-all ${
-            activeTab === 'student'
+          className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'student'
               ? 'border-blue-500 text-blue-600'
               : 'border-transparent text-gray-600 hover:text-gray-900'
-          }`}
+            }`}
         >
           <FileText className="inline mr-2" size={18} />
           Student History

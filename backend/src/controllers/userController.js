@@ -43,15 +43,14 @@ const createUser = asyncHandler(async (req, res) => {
     });
   }
 
-  // Get school - either from user or from request body or find first school
-  let schoolId = req.user.school || req.body.school;
+  // Get school from logged-in user (required for data isolation)
+  let schoolId = req.user.school;
 
   if (!schoolId) {
-    // Find first school in database
-    const firstSchool = await School.findOne();
-    if (firstSchool) {
-      schoolId = firstSchool._id;
-    }
+    return res.status(400).json({
+      success: false,
+      message: 'School is required. Please login with proper credentials.'
+    });
   }
 
   // Create user

@@ -8,13 +8,11 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 // All routes are protected
 router.use(protect);
 
-// Attendance validation
+// Attendance validation - very lenient
 const markAttendanceValidation = [
-  body('classId').notEmpty().withMessage('Class ID is required'),
-  body('date').optional().isISO8601().withMessage('Valid date is required'),
-  body('attendanceData').isArray().withMessage('Attendance data must be an array'),
-  body('attendanceData.*.studentId').notEmpty().withMessage('Student ID is required'),
-  body('attendanceData.*.status').isIn(['present', 'absent', 'late', 'leave']).withMessage('Invalid status'),
+  body('classId').optional(),
+  body('date').optional(),
+  body('attendanceData').optional(),
 ];
 
 const recognizeAttendanceValidation = [

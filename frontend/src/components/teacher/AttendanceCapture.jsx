@@ -157,19 +157,19 @@ const AttendanceCapture = () => {
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      // Prepare attendance data
-      const attendanceData = {
+      // Prepare attendance data in the format expected by /attendance/mark endpoint
+      const attendancePayload = {
         classId: selectedClassId,
         date: date,
-        students: students.map(s => ({
+        attendanceData: students.map(s => ({
           studentId: s._id,
           status: s.status,
-          confidence: s.confidence || 0
+          confidenceScore: s.confidence || 0
         }))
       }
 
       // API call to save attendance
-      const response = await apiMethods.captureAttendance(attendanceData)
+      const response = await apiMethods.markAttendance(attendancePayload)
 
       if (response.success) {
         toast.success('Attendance submitted successfully!')
