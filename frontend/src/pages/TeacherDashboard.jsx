@@ -13,16 +13,17 @@ import {
   CheckCircle,
   BarChart3,
   AlertCircle,
-  Loader2
+  Loader2,
+  LogOut
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import { useAuth } from '../components/auth/ProtectedRoute';
+import { useAuth } from '../context/AuthContext';
 import { apiMethods } from '../utils/api';
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
@@ -76,6 +77,11 @@ const TeacherDashboard = () => {
     setIsLoading(false);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   // Quick actions
   const quickActions = [
     { title: 'Take Attendance', icon: Camera, color: 'from-blue-500 to-cyan-500', path: '/attendance' },
@@ -109,6 +115,13 @@ const TeacherDashboard = () => {
               onClick={() => navigate('/attendance')}
             >
               Take Attendance
+            </Button>
+            <Button
+              variant="outline"
+              icon={LogOut}
+              onClick={handleLogout}
+            >
+              Logout
             </Button>
           </div>
         </div>

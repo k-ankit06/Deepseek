@@ -13,16 +13,17 @@ import {
   Download,
   Eye,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  LogOut
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import { useAuth } from '../components/auth/ProtectedRoute';
+import { useAuth } from '../context/AuthContext';
 import { apiMethods } from '../utils/api';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalTeachers: 0,
@@ -139,6 +140,11 @@ const AdminDashboard = () => {
     alert('All notifications marked as read');
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4">
       {/* Header Section */}
@@ -174,6 +180,13 @@ const AdminDashboard = () => {
               onClick={handleExportReport}
             >
               Export Report
+            </Button>
+            <Button
+              variant="outline"
+              icon={LogOut}
+              onClick={handleLogout}
+            >
+              Logout
             </Button>
           </div>
         </div>

@@ -142,22 +142,31 @@ const AttendanceVerification = () => {
     if (!selectedRecord || !editStatus) return
 
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Call backend API to update attendance
+      const response = await apiMethods.updateAttendance(selectedRecord.id, {
+        status: editStatus,
+        remarks: 'Manually updated by teacher'
+      })
 
-      setAttendanceRecords(prev =>
-        prev.map(record =>
-          record.id === selectedRecord.id
-            ? { ...record, status: editStatus, remarks: 'Manually updated' }
-            : record
+      if (response.success) {
+        // Update local state
+        setAttendanceRecords(prev =>
+          prev.map(record =>
+            record.id === selectedRecord.id
+              ? { ...record, status: editStatus, remarks: 'Manually updated' }
+              : record
+          )
         )
-      )
 
-      toast.success('Attendance updated successfully')
-      setShowEditModal(false)
-      setSelectedRecord(null)
-      setEditStatus('')
+        toast.success('Attendance updated successfully')
+        setShowEditModal(false)
+        setSelectedRecord(null)
+        setEditStatus('')
+      } else {
+        toast.error(response.message || 'Failed to update attendance')
+      }
     } catch (error) {
+      console.error('Update attendance error:', error)
       toast.error('Failed to update attendance')
     }
   }

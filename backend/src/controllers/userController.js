@@ -204,7 +204,7 @@ const deleteUser = asyncHandler(async (req, res) => {
     });
   }
 
-  await user.remove();
+  await user.deleteOne();
 
   res.status(200).json({
     success: true,

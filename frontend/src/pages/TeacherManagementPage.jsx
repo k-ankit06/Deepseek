@@ -27,6 +27,7 @@ const TeacherManagementPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState(null);
 
   // New teacher form
   const [newTeacher, setNewTeacher] = useState({
@@ -78,8 +79,8 @@ const TeacherManagementPage = () => {
     active: teachers.filter(t => t.isActive !== false).length,
   };
 
-  // Add new teacher
-  const handleAddTeacher = async () => {
+  // Add or update teacher
+  const handleSaveTeacher = async () => {
     if (!newTeacher.name.trim()) {
       toast.error('Please enter teacher name');
       return;
@@ -88,30 +89,46 @@ const TeacherManagementPage = () => {
       toast.error('Please enter email');
       return;
     }
-    if (!newTeacher.password || newTeacher.password.length < 6) {
+    if (!editingTeacher && (!newTeacher.password || newTeacher.password.length < 6)) {
       toast.error('Password must be at least 6 characters');
       return;
     }
 
     setIsSaving(true);
     try {
-      const teacherData = {
-        name: newTeacher.name,
-        email: newTeacher.email,
-        password: newTeacher.password,
-        role: 'teacher',
-        phone: newTeacher.phone,
-      };
-
-      const response = await apiMethods.createUser(teacherData);
-      if (response.success) {
-        toast.success('Teacher added successfully!');
-        setShowAddModal(false);
-        setNewTeacher({ name: '', email: '', password: '', phone: '', assignedClasses: [] });
-        fetchData();
+      if (editingTeacher) {
+        // Update existing teacher
+        const updateData = {
+          name: newTeacher.name,
+          phone: newTeacher.phone,
+        };
+        const response = await apiMethods.updateUser(editingTeacher._id, updateData);
+        if (response.success) {
+          toast.success('Teacher updated successfully!');
+          setShowAddModal(false);
+          setEditingTeacher(null);
+          setNewTeacher({ name: '', email: '', password: '', phone: '', assignedClasses: [] });
+          fetchData();
+        }
+      } else {
+        // Create new teacher
+        const teacherData = {
+          name: newTeacher.name,
+          email: newTeacher.email,
+          password: newTeacher.password,
+          role: 'teacher',
+          phone: newTeacher.phone,
+        };
+        const response = await apiMethods.createUser(teacherData);
+        if (response.success) {
+          toast.success('Teacher added successfully!');
+          setShowAddModal(false);
+          setNewTeacher({ name: '', email: '', password: '', phone: '', assignedClasses: [] });
+          fetchData();
+        }
       }
     } catch (error) {
-      toast.error(error.message || 'Failed to add teacher');
+      toast.error(error.message || 'Failed to save teacher');
     } finally {
       setIsSaving(false);
     }
@@ -130,7 +147,8 @@ const TeacherManagementPage = () => {
         fetchData();
       }
     } catch (error) {
-      toast.error('Failed to delete teacher');
+      console.error('Delete error:', error);
+      toast.error(error.message || error.response?.data?.message || 'Failed to delete teacher');
     }
   };
 
@@ -223,6 +241,17 @@ const TeacherManagementPage = () => {
                       <button
                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
                         title="Edit"
+                        onClick={() => {
+                          setEditingTeacher(teacher);
+                          setNewTeacher({
+                            name: teacher.name,
+                            email: teacher.email,
+                            password: '',
+                            phone: teacher.phone || '',
+                            assignedClasses: []
+                          });
+                          setShowAddModal(true);
+                        }}
                       >
                         <Edit size={16} />
                       </button>
@@ -249,14 +278,14 @@ const TeacherManagementPage = () => {
                     )}
                     <div className="flex items-center">
                       <BookOpen size={14} className="mr-2" />
-                      {teacher.assignedClasses?.length || 0} Classes Assigned
+                      {classes.filter(c => c.teacher?._id === teacher._id || c.teacher === teacher._id).length} Classes Assigned
                     </div>
                   </div>
 
                   <div className="mt-4 pt-4 border-t">
                     <span className={`px-3 py-1 rounded-full text-xs ${teacher.isActive !== false
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
                       }`}>
                       {teacher.isActive !== false ? 'Active' : 'Inactive'}
                     </span>
@@ -297,10 +326,11 @@ const TeacherManagementPage = () => {
             className="bg-white rounded-xl max-w-md w-full p-6"
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-800">Add New Teacher</h2>
+              <h2 className="text-xl font-bold text-gray-800">{editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}</h2>
               <button
                 onClick={() => {
                   setShowAddModal(false);
+                  setEditingTeacher(null);
                   setNewTeacher({ name: '', email: '', password: '', phone: '', assignedClasses: [] });
                 }}
                 className="p-2 hover:bg-gray-100 rounded-lg"
@@ -330,20 +360,26 @@ const TeacherManagementPage = () => {
                   value={newTeacher.email}
                   onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
                   placeholder="Enter email address"
+                  disabled={!!editingTeacher}
                 />
+                {editingTeacher && (
+                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password *
-                </label>
-                <Input
-                  type="password"
-                  value={newTeacher.password}
-                  onChange={(e) => setNewTeacher({ ...newTeacher, password: e.target.value })}
-                  placeholder="Min 6 characters"
-                />
-              </div>
+              {!editingTeacher && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Password *
+                  </label>
+                  <Input
+                    type="password"
+                    value={newTeacher.password}
+                    onChange={(e) => setNewTeacher({ ...newTeacher, password: e.target.value })}
+                    placeholder="Min 6 characters"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -385,6 +421,7 @@ const TeacherManagementPage = () => {
                   className="flex-1"
                   onClick={() => {
                     setShowAddModal(false);
+                    setEditingTeacher(null);
                     setNewTeacher({ name: '', email: '', password: '', phone: '', assignedClasses: [] });
                   }}
                 >
@@ -394,10 +431,10 @@ const TeacherManagementPage = () => {
                   variant="primary"
                   className="flex-1"
                   icon={isSaving ? Loader2 : Save}
-                  onClick={handleAddTeacher}
+                  onClick={handleSaveTeacher}
                   disabled={isSaving}
                 >
-                  {isSaving ? 'Saving...' : 'Add Teacher'}
+                  {isSaving ? 'Saving...' : (editingTeacher ? 'Update Teacher' : 'Add Teacher')}
                 </Button>
               </div>
             </div>

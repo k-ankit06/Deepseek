@@ -99,9 +99,35 @@ const registerSchool = async (req, res) => {
     });
   } catch (error) {
     console.error('School registration error:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+
+    // Handle specific MongoDB errors
+    if (error.code === 11000) {
+      // Duplicate key error
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        success: false,
+        message: `A ${field === 'code' ? 'school with this code' : field} already exists`,
+      });
+    }
+
+    // Handle mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: messages,
+      });
+    }
+
+    // Generic server error with more details in development
     res.status(500).json({
       success: false,
       message: 'Server error during school registration',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };

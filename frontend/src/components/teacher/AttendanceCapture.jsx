@@ -33,6 +33,7 @@ const AttendanceCapture = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [classes, setClasses] = useState([])
+  const [imageConfirmed, setImageConfirmed] = useState(false)
 
   // Fetch classes on mount
   useEffect(() => {
@@ -111,32 +112,93 @@ const AttendanceCapture = () => {
     if (data?.image) {
       setCapturedImage(data.image.url || data.image)
       setIsCameraOpen(false)
-      await processAttendance(data.image)
+      setImageConfirmed(false) // Reset confirmation when new image captured
     }
+  }
+
+  // Confirm image has students
+  const handleConfirmImage = async () => {
+    if (!imageConfirmed) {
+      toast.error('Please confirm that students are visible in the image')
+      return
+    }
+    await processAttendance(capturedImage)
   }
 
   // Process captured image with AI
   const processAttendance = async (imageData) => {
     setIsProcessing(true)
     try {
-      // Try to call AI recognition API
-      // const result = await apiMethods.recognizeFaces(imageData)
+      // Call AI recognition API
+      const imageUrl = typeof imageData === 'string' ? imageData : imageData.url || imageData
 
-      // For now, mark all students as present (AI not fully integrated)
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      let result
+      try {
+        result = await apiMethods.recognizeFaces(imageUrl)
+      } catch (apiError) {
+        console.warn('AI service not available:', apiError)
+        result = null
+      }
 
-      // Update students with "recognized" status
-      setStudents(prev => prev.map(s => ({
+      // Check if AI service responded with data
+      if (result && result.success) {
+        const recognizedFaces = result.recognized || result.faces || []
+
+        if (recognizedFaces.length > 0) {
+          // AI successfully recognized faces - use AI results
+          const updatedStudents = students.map(student => {
+            const recognized = recognizedFaces.find(face =>
+              face.studentId === student._id ||
+              face.student_id === student._id ||
+              face.rollNumber === student.rollNumber
+            )
+
+            if (recognized) {
+              return {
+                ...student,
+                status: 'present',
+                confidence: (recognized.confidence || recognized.match_confidence || 0) * 100
+              }
+            } else {
+              return {
+                ...student,
+                status: 'absent',
+                confidence: 0
+              }
+            }
+          })
+
+          setStudents(updatedStudents)
+          setStep(3)
+          toast.success(`${recognizedFaces.length} face(s) detected. Please review and adjust.`)
+          return
+        }
+      }
+
+      // Fallback mode: AI didn't detect faces or service not ready
+      // Set all students to present with 0 confidence for manual review
+      const fallbackStudents = students.map(s => ({
         ...s,
         status: 'present',
-        confidence: s.faceRegistered ? (80 + Math.random() * 20) : 0
-      })))
+        confidence: 0
+      }))
 
+      setStudents(fallbackStudents)
       setStep(3)
-      toast.success(`${students.length} students in class. Review and submit.`)
+      toast.info('AI face detection not available. Please manually mark attendance.')
     } catch (error) {
-      toast.error('Failed to process image. Please try again.')
-      console.error(error)
+      console.error('Attendance processing error:', error)
+
+      // Even on error, allow manual marking
+      const fallbackStudents = students.map(s => ({
+        ...s,
+        status: 'present',
+        confidence: 0
+      }))
+
+      setStudents(fallbackStudents)
+      setStep(3)
+      toast.warning('Processing error. Please manually mark attendance.')
     } finally {
       setIsProcessing(false)
     }
@@ -363,16 +425,42 @@ const AttendanceCapture = () => {
                     alt="Captured"
                     className="max-w-full h-64 object-contain mx-auto rounded-lg mb-4"
                   />
-                  <Button
-                    variant="outline"
-                    icon={RefreshCw}
-                    onClick={() => {
-                      setCapturedImage(null)
-                      setIsCameraOpen(true)
-                    }}
-                  >
-                    Retake Photo
-                  </Button>
+
+                  {/* Confirmation Checkbox */}
+                  <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={imageConfirmed}
+                        onChange={(e) => setImageConfirmed(e.target.checked)}
+                        className="w-5 h-5 text-blue-600 mr-3"
+                      />
+                      <span className="text-sm font-medium text-gray-700">
+                        ✓ I confirm that students are clearly visible in this image
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="flex gap-3 justify-center">
+                    <Button
+                      variant="outline"
+                      icon={RefreshCw}
+                      onClick={() => {
+                        setCapturedImage(null)
+                        setImageConfirmed(false)
+                        setIsCameraOpen(true)
+                      }}
+                    >
+                      Retake Photo
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={handleConfirmImage}
+                      disabled={!imageConfirmed}
+                    >
+                      Confirm & Process
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

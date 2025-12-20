@@ -163,9 +163,43 @@ const registerStudent = async (req, res) => {
     });
   } catch (error) {
     console.error('Register student error:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+
+    // Handle specific MongoDB errors
+    if (error.code === 11000) {
+      // Duplicate key error
+      const field = Object.keys(error.keyPattern || {})[0] || 'field';
+      return res.status(400).json({
+        success: false,
+        message: `A student with this ${field} already exists`,
+      });
+    }
+
+    // Handle mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: messages,
+      });
+    }
+
+    // Handle cast errors (invalid ObjectId)
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid ${error.path}: ${error.value}`,
+      });
+    }
+
+    // Generic server error with more details in development
     res.status(500).json({
       success: false,
       message: 'Server error registering student',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
