@@ -234,7 +234,7 @@ const deleteClass = asyncHandler(async (req, res) => {
     });
   }
 
-  await classObj.remove();
+  await classObj.deleteOne();
 
   res.status(200).json({
     success: true,

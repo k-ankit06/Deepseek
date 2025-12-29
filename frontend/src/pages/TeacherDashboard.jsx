@@ -18,12 +18,13 @@ import {
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import { useAuth } from '../components/auth/ProtectedRoute';
+import { useAuth } from '../context/AuthContext';
 import { apiMethods } from '../utils/api';
 import toast from 'react-hot-toast';
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
+<<<<<<< HEAD
   const { user } = useAuth();
 
   // Logout handler
@@ -33,6 +34,9 @@ const TeacherDashboard = () => {
     toast.success('Logged out successfully!');
     window.location.href = '/login';
   };
+=======
+  const { user, logout } = useAuth();
+>>>>>>> 74931717c3f8107625344f0ab49ed9edeea78cd7
   const [isLoading, setIsLoading] = useState(true);
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
@@ -86,6 +90,11 @@ const TeacherDashboard = () => {
     setIsLoading(false);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   // Quick actions
   const quickActions = [
     { title: 'Take Attendance', icon: Camera, color: 'from-blue-500 to-cyan-500', path: '/attendance' },
@@ -124,7 +133,10 @@ const TeacherDashboard = () => {
               variant="outline"
               icon={LogOut}
               onClick={handleLogout}
+<<<<<<< HEAD
               className="text-red-600 border-red-200 hover:bg-red-50"
+=======
+>>>>>>> 74931717c3f8107625344f0ab49ed9edeea78cd7
             >
               Logout
             </Button>

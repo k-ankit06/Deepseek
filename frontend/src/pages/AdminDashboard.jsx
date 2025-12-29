@@ -18,12 +18,13 @@ import {
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import { useAuth } from '../components/auth/ProtectedRoute';
+import { useAuth } from '../context/AuthContext';
 import { apiMethods } from '../utils/api';
 import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+<<<<<<< HEAD
   const { user } = useAuth();
 
   // Logout handler
@@ -33,6 +34,9 @@ const AdminDashboard = () => {
     toast.success('Logged out successfully!');
     window.location.href = '/login';
   };
+=======
+  const { user, logout } = useAuth();
+>>>>>>> 74931717c3f8107625344f0ab49ed9edeea78cd7
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalTeachers: 0,
@@ -149,6 +153,11 @@ const AdminDashboard = () => {
     alert('All notifications marked as read');
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4">
       {/* Header Section */}
@@ -189,7 +198,10 @@ const AdminDashboard = () => {
               variant="outline"
               icon={LogOut}
               onClick={handleLogout}
+<<<<<<< HEAD
               className="text-red-600 border-red-200 hover:bg-red-50"
+=======
+>>>>>>> 74931717c3f8107625344f0ab49ed9edeea78cd7
             >
               Logout
             </Button>
