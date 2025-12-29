@@ -85,6 +85,8 @@ const registerStudent = async (req, res) => {
       aadhaarNumber,
       classId,
       midDayMealEligible,
+      faceImage,     // Base64 image string
+      faceEncoding,  // 512-D encoding array from FaceNet AI service
     } = req.body;
 
     // Get school from logged-in user (required for data isolation)
@@ -129,7 +131,7 @@ const registerStudent = async (req, res) => {
       schoolId = studentClass.school;
     }
 
-    // Create student
+    // Create student with face data
     const student = await Student.create({
       rollNumber,
       firstName,
@@ -143,6 +145,10 @@ const registerStudent = async (req, res) => {
       class: classId,
       school: schoolId,
       midDayMealEligible: midDayMealEligible !== undefined ? midDayMealEligible : true,
+      faceImage: faceImage || null,        // Base64 image for viewing
+      faceEncoding: faceEncoding || null,  // 512-D vector for FaceNet matching
+      faceRegistered: !!faceEncoding,      // True if encoding exists
+      lastFaceUpdate: faceEncoding ? new Date() : null,
     });
 
     // Update class student count

@@ -13,16 +13,26 @@ import {
   Download,
   Eye,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  LogOut
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { useAuth } from '../components/auth/ProtectedRoute';
 import { apiMethods } from '../utils/api';
+import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // Logout handler
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    toast.success('Logged out successfully!');
+    window.location.href = '/login';
+  };
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalTeachers: 0,
@@ -174,6 +184,14 @@ const AdminDashboard = () => {
               onClick={handleExportReport}
             >
               Export Report
+            </Button>
+            <Button
+              variant="outline"
+              icon={LogOut}
+              onClick={handleLogout}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+            >
+              Logout
             </Button>
           </div>
         </div>

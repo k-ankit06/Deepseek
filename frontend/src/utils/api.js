@@ -125,6 +125,7 @@ export const apiMethods = {
   // Attendance
   markAttendance: (data) => api.post('/attendance/mark', data),
   captureAttendance: (data) => api.post('/attendance/capture', data),
+  recognizeAttendance: (data) => api.post('/attendance/recognize', data),
   getDailyAttendance: (params) => api.get('/attendance/daily', { params }),
   getMonthlyAttendance: (params) => api.get('/attendance/monthly', { params }),
   updateAttendance: (id, data) => api.put(`/attendance/${id}`, data),

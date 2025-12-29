@@ -3,11 +3,11 @@ import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { useCamera } from '../../hooks/useCamera'
 import { useAuth } from '../../context/AuthContext'
-import { 
-  Camera, 
-  UserPlus, 
-  Upload, 
-  CheckCircle, 
+import {
+  Camera,
+  UserPlus,
+  Upload,
+  CheckCircle,
   XCircle,
   User,
   BookOpen,
@@ -30,6 +30,7 @@ const StudentRegistration = () => {
   const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm()
   const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [previewImage, setPreviewImage] = useState(null)
+  const [faceEncoding, setFaceEncoding] = useState(null)  // 512-D FaceNet encoding
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [registrationComplete, setRegistrationComplete] = useState(false)
   const [capturedFaces, setCapturedFaces] = useState([])
@@ -54,7 +55,7 @@ const StudentRegistration = () => {
         toast.error('Image size must be less than 5MB')
         return
       }
-      
+
       const reader = new FileReader()
       reader.onload = (e) => {
         setPreviewImage(e.target.result)
@@ -64,13 +65,20 @@ const StudentRegistration = () => {
     }
   }
 
-  // Handle camera capture
+  // Handle camera capture - stores image and FaceNet encoding
   const handleCameraCapture = (data) => {
     if (data.image) {
-      setPreviewImage(data.image.url)
+      setPreviewImage(data.image.url || data.image)
       setCapturedFaces(data.faces || [])
+
+      // Store FaceNet encoding if available (from AI service)
+      if (data.encoding) {
+        setFaceEncoding(data.encoding)  // 512-D FaceNet encoding
+        console.log('FaceNet encoding captured:', data.encoding.length, 'dimensions')
+      }
+
       setIsCameraOpen(false)
-      toast.success('Photo captured successfully')
+      // Toast is already shown by CameraCapture component
     }
   }
 
@@ -88,7 +96,7 @@ const StudentRegistration = () => {
 
       // Register face
       const result = await apiMethods.registerFace(studentId, blob)
-      
+
       if (result.success) {
         toast.success('Face registered successfully')
         return true
@@ -104,53 +112,60 @@ const StudentRegistration = () => {
   // Form submission
   const onSubmit = async (data) => {
     setIsSubmitting(true)
-    
+
     try {
+      // Validate face was captured
+      if (!previewImage) {
+        toast.error('Please capture student face photo first')
+        setIsSubmitting(false)
+        return
+      }
+
+      if (!faceEncoding) {
+        toast.error('Face encoding not captured. Please retake the photo.')
+        setIsSubmitting(false)
+        return
+      }
+
       // Generate student ID if not provided
       if (!data.studentId) {
         data.studentId = generateStudentId()
       }
 
-      // Create form data for file upload
-      const formData = new FormData()
-      
-      // Append all form data
-      Object.keys(data).forEach(key => {
-        if (key === 'photo' && data[key]) {
-          formData.append('photo', data[key])
-        } else if (key === 'dateOfBirth' && data[key]) {
-          formData.append(key, new Date(data[key]).toISOString())
-        } else if (data[key]) {
-          formData.append(key, data[key])
-        }
-      })
+      // Prepare student data with face information
+      const studentData = {
+        rollNumber: data.rollNumber,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth).toISOString() : undefined,
+        gender: data.gender,  // Already in correct format (Male/Female/Other)
+        parentName: data.fatherName || data.motherName || '',
+        parentPhone: data.contactNumber || '',
+        address: data.address || '',
+        classId: data.class,  // This will need to be mapped to actual class ID
+        midDayMealEligible: true,
+        faceImage: previewImage,       // Base64 image for viewing
+        faceEncoding: faceEncoding,    // 512-D FaceNet encoding for matching
+      }
 
-      // Append teacher info
-      formData.append('createdBy', user.id)
-      formData.append('class', data.class)
-      formData.append('section', data.section)
+      console.log('Registering student with FaceNet encoding:', faceEncoding.length, 'dimensions')
 
-      // Submit to API
-      const response = await apiMethods.createStudent(formData)
-      
+      // Submit to API - face data is included directly
+      const response = await apiMethods.createStudent(studentData)
+
       if (response.success) {
-        // Register face
-        const faceRegistered = await handleFaceRegistration(data.studentId)
-        
-        if (faceRegistered) {
-          setRegistrationComplete(true)
-          toast.success('Student registered successfully!')
-          reset()
-          setPreviewImage(null)
-          setCapturedFaces([])
-        } else {
-          toast.error('Student created but face registration failed')
-        }
+        setRegistrationComplete(true)
+        toast.success('Student registered successfully with face data!')
+        reset()
+        setPreviewImage(null)
+        setFaceEncoding(null)
+        setCapturedFaces([])
       } else {
-        throw new Error(response.error)
+        throw new Error(response.error || 'Registration failed')
       }
     } catch (error) {
-      toast.error('Registration failed: ' + error.message)
+      console.error('Registration error:', error)
+      toast.error('Registration failed: ' + (error.message || 'Unknown error'))
     } finally {
       setIsSubmitting(false)
     }
@@ -217,7 +232,7 @@ const StudentRegistration = () => {
                     icon={User}
                     required
                   />
-                  
+
                   <Input
                     label="Last Name"
                     placeholder="Enter last name"
@@ -226,7 +241,7 @@ const StudentRegistration = () => {
                     icon={User}
                     required
                   />
-                  
+
                   <Input
                     label="Student ID (Optional)"
                     placeholder="Will be auto-generated"
@@ -234,12 +249,12 @@ const StudentRegistration = () => {
                     icon={Hash}
                     helperText="Leave empty for auto-generation"
                   />
-                  
+
                   <Input
                     label="Roll Number"
                     type="number"
                     placeholder="Enter roll number"
-                    {...register('rollNumber', { 
+                    {...register('rollNumber', {
                       required: 'Roll number is required',
                       min: { value: 1, message: 'Roll number must be positive' }
                     })}
@@ -247,13 +262,13 @@ const StudentRegistration = () => {
                     icon={Hash}
                     required
                   />
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Gender <span className="text-red-500">*</span>
                     </label>
                     <div className="flex space-x-4">
-                      {['male', 'female', 'other'].map(gender => (
+                      {['Male', 'Female', 'Other'].map(gender => (
                         <label key={gender} className="inline-flex items-center">
                           <input
                             type="radio"
@@ -261,7 +276,7 @@ const StudentRegistration = () => {
                             {...register('gender', { required: 'Gender is required' })}
                             className="text-primary-600 focus:ring-primary-500"
                           />
-                          <span className="ml-2 capitalize">{gender}</span>
+                          <span className="ml-2">{gender}</span>
                         </label>
                       ))}
                     </div>
@@ -269,7 +284,7 @@ const StudentRegistration = () => {
                       <p className="mt-1 text-sm text-red-600">{errors.gender.message}</p>
                     )}
                   </div>
-                  
+
                   <Input
                     label="Date of Birth"
                     type="date"
@@ -305,7 +320,7 @@ const StudentRegistration = () => {
                       <p className="mt-1 text-sm text-red-600">{errors.class.message}</p>
                     )}
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Section <span className="text-red-500">*</span>
@@ -339,14 +354,14 @@ const StudentRegistration = () => {
                     {...register('fatherName')}
                     icon={User}
                   />
-                  
+
                   <Input
                     label="Mother's Name"
                     placeholder="Enter mother's name"
                     {...register('motherName')}
                     icon={User}
                   />
-                  
+
                   <Input
                     label="Contact Number"
                     type="tel"
@@ -354,7 +369,7 @@ const StudentRegistration = () => {
                     {...register('contactNumber')}
                     icon={Phone}
                   />
-                  
+
                   <Input
                     label="Address"
                     placeholder="Enter address"
@@ -370,13 +385,13 @@ const StudentRegistration = () => {
                   <Camera className="mr-2" size={20} />
                   Student Photo & Face Registration
                 </h3>
-                
+
                 <div className="space-y-4">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Capture clear front-facing photo for facial recognition. 
+                    Capture clear front-facing photo for facial recognition.
                     Ensure good lighting and no obstructions.
                   </p>
-                  
+
                   <div className="flex flex-col md:flex-row gap-4">
                     {/* Photo Preview */}
                     <div className="flex-1">
@@ -405,7 +420,7 @@ const StudentRegistration = () => {
                           </>
                         )}
                       </div>
-                      
+
                       {capturedFaces.length > 0 && (
                         <div className="mt-2 text-sm text-green-600 flex items-center">
                           <CheckCircle className="mr-1" size={16} />
@@ -413,7 +428,7 @@ const StudentRegistration = () => {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Capture Options */}
                     <div className="space-y-3">
                       <Button
@@ -425,7 +440,7 @@ const StudentRegistration = () => {
                       >
                         Open Camera
                       </Button>
-                      
+
                       <Button
                         type="button"
                         variant="secondary"
@@ -435,7 +450,7 @@ const StudentRegistration = () => {
                       >
                         Upload Photo
                       </Button>
-                      
+
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -443,7 +458,7 @@ const StudentRegistration = () => {
                         onChange={handleImageUpload}
                         className="hidden"
                       />
-                      
+
                       <div className="text-xs text-gray-500">
                         <p>• Use front camera in good light</p>
                         <p>• Keep face centered and visible</p>
@@ -466,7 +481,7 @@ const StudentRegistration = () => {
                 >
                   {isSubmitting ? 'Registering...' : 'Register Student'}
                 </Button>
-                
+
                 <Button
                   type="button"
                   variant="secondary"
@@ -475,7 +490,7 @@ const StudentRegistration = () => {
                 >
                   Quick Registration
                 </Button>
-                
+
                 <Button
                   type="button"
                   variant="ghost"
@@ -557,21 +572,21 @@ const StudentRegistration = () => {
               <Button
                 variant="outline"
                 fullWidth
-                onClick={() => {/* Navigate to bulk upload */}}
+                onClick={() => {/* Navigate to bulk upload */ }}
               >
                 Bulk Upload Students
               </Button>
               <Button
                 variant="outline"
                 fullWidth
-                onClick={() => {/* Navigate to students list */}}
+                onClick={() => {/* Navigate to students list */ }}
               >
                 View All Students
               </Button>
               <Button
                 variant="outline"
                 fullWidth
-                onClick={() => {/* Navigate to attendance */}}
+                onClick={() => {/* Navigate to attendance */ }}
               >
                 Take Attendance
               </Button>
@@ -593,6 +608,7 @@ const StudentRegistration = () => {
           onClose={() => setIsCameraOpen(false)}
           mode="photo"
           showPreview={true}
+          purpose="registration"  // Only detect face, no matching
         />
       </Modal>
 

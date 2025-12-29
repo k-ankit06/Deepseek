@@ -10,7 +10,10 @@ import {
   Phone,
   Mail,
   MapPin,
-  Loader2
+  Loader2,
+  CheckCircle,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -25,6 +28,9 @@ const StudentRegistrationPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
+  const [isDetectingFace, setIsDetectingFace] = useState(false);
+  const [faceDetected, setFaceDetected] = useState(null); // null, true, false
+  const [faceError, setFaceError] = useState('');
 
   const [studentInfo, setStudentInfo] = useState({
     firstName: '',
@@ -128,9 +134,36 @@ const StudentRegistrationPage = () => {
       return;
     }
 
+    if (!faceDetected) {
+      toast.error('Please capture a valid photo with human face');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      // Prepare data for API
+      // Step 1: Get face encoding from AI service
+      let faceEncoding = null;
+
+      if (photoPreview) {
+        try {
+          const encodingResponse = await apiMethods.encodeFace(photoPreview);
+
+          if (encodingResponse.success && encodingResponse.encoding) {
+            faceEncoding = encodingResponse.encoding;
+          } else {
+            toast.error(encodingResponse.error || 'Failed to process face');
+            setIsSaving(false);
+            return;
+          }
+        } catch (encError) {
+          console.error('Face encoding error:', encError);
+          toast.error('Failed to process face - please try again');
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      // Step 2: Prepare student data with BOTH face image and encoding
       const studentData = {
         rollNumber: studentInfo.rollNumber,
         firstName: studentInfo.firstName,
@@ -141,23 +174,15 @@ const StudentRegistrationPage = () => {
         parentPhone: studentInfo.parentPhone,
         address: `${studentInfo.address}, ${studentInfo.city} - ${studentInfo.pinCode}`,
         classId: studentInfo.classId,
+        faceImage: photoPreview,      // Base64 image for admin viewing
+        faceEncoding: faceEncoding,   // 128-D encoding for AI matching
       };
 
-      // Call API to register student
+      // Step 3: Save student to database
       const response = await apiMethods.createStudent(studentData);
 
       if (response.success) {
-        // If photo exists, register face
-        if (photoPreview && response.data?._id) {
-          try {
-            await apiMethods.registerFace(response.data._id, photoPreview);
-          } catch (faceError) {
-            console.error('Face registration failed:', faceError);
-            toast.error('Student saved but face registration failed');
-          }
-        }
-
-        toast.success('Student registered successfully!');
+        toast.success('Student registered successfully with face recognition!');
         navigate('/admin');
       } else {
         toast.error(response.message || 'Failed to register student');
@@ -186,14 +211,43 @@ const StudentRegistrationPage = () => {
     }
   };
 
-  const handleCameraCapture = (data) => {
-    if (data && data.image) {
-      const imageUrl = data.image.url || data.image;
-      setPhotoPreview(imageUrl);
-    } else if (typeof data === 'string') {
-      setPhotoPreview(data);
+  const handleCameraCapture = async (data) => {
+    const imageUrl = data?.image?.url || data?.image || (typeof data === 'string' ? data : null);
+
+    if (!imageUrl) {
+      toast.error('Failed to capture image');
+      return;
     }
+
     setShowCamera(false);
+    setPhotoPreview(imageUrl);
+    setIsDetectingFace(true);
+    setFaceDetected(null);
+    setFaceError('');
+
+    try {
+      // Call AI service to detect and validate human face
+      const response = await apiMethods.detectFaces(imageUrl);
+
+      if (response.success && response.faces > 0) {
+        setFaceDetected(true);
+        setFaceError('');
+        toast.success('✅ Human face detected successfully!');
+      } else {
+        setFaceDetected(false);
+        const errorMsg = response.message || response.errors?.[0] || 'No human face detected';
+        setFaceError(errorMsg);
+        toast.error(`❌ ${errorMsg}`);
+      }
+    } catch (error) {
+      console.error('Face detection error:', error);
+      // STRICT: Don't allow images if face detection fails
+      setFaceDetected(false);
+      setFaceError('Face detection service error - please try again');
+      toast.error('❌ Could not verify face. Please try again.');
+    } finally {
+      setIsDetectingFace(false);
+    }
   };
 
   const handleChange = (field, value) => {
@@ -241,13 +295,39 @@ const StudentRegistrationPage = () => {
             <h3 className="font-bold text-gray-800 mb-4 text-center">Student Photo *</h3>
 
             <div className="flex flex-col items-center">
-              <div className={`w-48 h-48 rounded-xl bg-gray-100 flex items-center justify-center mb-4 overflow-hidden border-2 ${errors.photo ? 'border-red-500' : 'border-gray-200'}`}>
+              <div className={`w-48 h-48 rounded-xl bg-gray-100 flex items-center justify-center mb-4 overflow-hidden border-2 ${errors.photo ? 'border-red-500' : faceDetected === true ? 'border-green-500' : faceDetected === false ? 'border-red-500' : 'border-gray-200'}`}>
                 {photoPreview ? (
                   <img src={photoPreview} alt="Student" className="w-full h-full object-cover" />
                 ) : (
                   <UserPlus className="text-gray-400" size={48} />
                 )}
               </div>
+
+              {/* Face Detection Status */}
+              {isDetectingFace && (
+                <div className="flex items-center text-blue-600 mb-2">
+                  <Loader2 className="animate-spin mr-2" size={16} />
+                  <span className="text-sm">Detecting face...</span>
+                </div>
+              )}
+              {faceDetected === true && !isDetectingFace && (
+                <div className="flex items-center text-green-600 mb-2">
+                  <CheckCircle className="mr-2" size={16} />
+                  <span className="text-sm font-medium">Human face detected ✓</span>
+                </div>
+              )}
+              {faceDetected === false && !isDetectingFace && (
+                <div className="flex flex-col items-center mb-2">
+                  <div className="flex items-center text-red-600">
+                    <XCircle className="mr-2" size={16} />
+                    <span className="text-sm font-medium">Face not detected</span>
+                  </div>
+                  {faceError && (
+                    <span className="text-xs text-red-500 mt-1">{faceError}</span>
+                  )}
+                </div>
+              )}
+
               {errors.photo && (
                 <p className="text-red-500 text-sm mb-2">{errors.photo}</p>
               )}
@@ -362,9 +442,9 @@ const StudentRegistrationPage = () => {
                   className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none ${errors.gender ? 'border-red-500' : 'border-gray-300'}`}
                 >
                   <option value="">Select gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
                 </select>
                 {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
               </div>

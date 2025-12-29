@@ -13,16 +13,26 @@ import {
   CheckCircle,
   BarChart3,
   AlertCircle,
-  Loader2
+  Loader2,
+  LogOut
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { useAuth } from '../components/auth/ProtectedRoute';
 import { apiMethods } from '../utils/api';
+import toast from 'react-hot-toast';
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // Logout handler
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    toast.success('Logged out successfully!');
+    window.location.href = '/login';
+  };
   const [isLoading, setIsLoading] = useState(true);
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
@@ -109,6 +119,14 @@ const TeacherDashboard = () => {
               onClick={() => navigate('/attendance')}
             >
               Take Attendance
+            </Button>
+            <Button
+              variant="outline"
+              icon={LogOut}
+              onClick={handleLogout}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+            >
+              Logout
             </Button>
           </div>
         </div>

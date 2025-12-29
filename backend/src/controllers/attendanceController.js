@@ -473,6 +473,13 @@ const recognizeAndMarkAttendance = async (req, res) => {
     const { classId, imageData, mode = 'online' } = req.body;
     const schoolId = req.user.school;
 
+    if (!imageData) {
+      return res.status(400).json({
+        success: false,
+        message: 'Image data is required',
+      });
+    }
+
     // Verify class
     const studentClass = await Class.findOne({
       _id: classId,
@@ -486,15 +493,54 @@ const recognizeAndMarkAttendance = async (req, res) => {
       });
     }
 
+
+    // Get all students in class with their face encodings
+    const students = await Student.find({
+      class: classId,
+      isActive: true,
+      faceRegistered: true,
+      faceEncoding: { $ne: null },
+    }).select('_id firstName lastName rollNumber faceEncoding');
+
+    console.log(`[Recognition] Found ${students.length} students with faceEncoding in class ${classId}`);
+
+    // Also check how many students have null encoding
+    const allStudentsInClass = await Student.find({ class: classId, isActive: true }).select('_id firstName faceRegistered faceEncoding');
+    console.log(`[Recognition] Total students in class: ${allStudentsInClass.length}`);
+    allStudentsInClass.forEach(s => {
+      console.log(`[Recognition] Student ${s.firstName}: faceRegistered=${s.faceRegistered}, hasEncoding=${!!(s.faceEncoding && s.faceEncoding.length > 0)}, encodingLength=${s.faceEncoding?.length || 0}`);
+    });
+
+    if (students.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No students with registered faces found in this class',
+      });
+    }
+
+    // Prepare student data for AI service (with faceEncoding for matching)
+    const studentData = {};
+    students.forEach(student => {
+      studentData[student._id.toString()] = {
+        encoding: student.faceEncoding,
+        name: `${student.firstName} ${student.lastName}`,
+        rollNumber: student.rollNumber,
+      };
+      console.log(`[Recognition] Sending student ${student.firstName} to AI, encoding length: ${student.faceEncoding?.length || 0}`);
+    });
+
+
     let recognitionResults = [];
+    let errors = [];
 
     if (mode === 'online' && process.env.AI_SERVICE_URL) {
-      // Online mode - send to AI service
+      // Online mode - send to AI service for strict human face recognition
       try {
         const response = await axios.post(
-          `${process.env.AI_SERVICE_URL}/recognize`,
+          `${process.env.AI_SERVICE_URL}/api/recognize-attendance`,
           {
-            image: imageData,
+            capturedImage: imageData,
+            students: studentData,
             schoolId,
             classId,
           },
@@ -502,43 +548,44 @@ const recognizeAndMarkAttendance = async (req, res) => {
             headers: {
               'Content-Type': 'application/json',
             },
-            timeout: 30000,
+            timeout: 60000, // 60 second timeout for face processing
           }
         );
 
         if (response.data.success) {
-          recognitionResults = response.data.recognitions || [];
+          recognitionResults = response.data.recognized || [];
+          errors = response.data.errors || [];
+        } else {
+          errors = response.data.errors || ['Recognition failed'];
         }
       } catch (error) {
         console.error('AI service error:', error.message);
-        // Fallback to offline mode
-        return await processOfflineRecognition(req, res);
+        return res.status(503).json({
+          success: false,
+          message: 'Face recognition service unavailable',
+          error: error.message,
+        });
       }
     } else {
-      // Offline mode
+      // Offline mode - basic recognition
       return await processOfflineRecognition(req, res);
     }
 
-    // Process recognition results
+    // Process recognition results - only mark if human face matched
     const attendanceData = [];
     const presentStudents = new Set();
 
     for (const result of recognitionResults) {
-      if (result.confidenceScore > 0.7 && result.studentId) {
+      // Only accept if confidence is above 60% (strict matching)
+      if (result.confidence >= 60 && result.studentId) {
         attendanceData.push({
           studentId: result.studentId,
           status: 'present',
-          confidenceScore: result.confidenceScore,
+          confidenceScore: result.confidence / 100,
         });
         presentStudents.add(result.studentId.toString());
       }
     }
-
-    // Get all students in class
-    const students = await Student.find({
-      class: classId,
-      isActive: true,
-    });
 
     // Mark absent for students not recognized
     for (const student of students) {
@@ -551,24 +598,27 @@ const recognizeAndMarkAttendance = async (req, res) => {
       }
     }
 
-    // Mark attendance
-    await markAttendanceHelper({
-      classId,
-      date: new Date(),
-      attendanceData,
-      recognitionResults,
-      mode,
-      markedBy: req.user._id,
-      schoolId,
-    });
+    // Only mark if we have valid attendance data
+    if (attendanceData.length > 0) {
+      await markAttendanceHelper({
+        classId,
+        date: new Date(),
+        attendanceData,
+        recognitionResults,
+        mode,
+        markedBy: req.user._id,
+        schoolId,
+      });
+    }
 
     res.status(200).json({
       success: true,
-      message: 'Attendance marked via face recognition',
+      message: 'Attendance processed via face recognition',
       data: {
-        recognized: recognitionResults.filter(r => r.confidenceScore > 0.7).length,
+        recognized: presentStudents.size,
         total: students.length,
         recognitions: recognitionResults,
+        errors: errors,
       },
     });
   } catch (error) {

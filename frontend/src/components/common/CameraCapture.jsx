@@ -29,13 +29,15 @@ const CameraCapture = ({
   maxFaces = 10,
   className = '',
   autoCapture = false,
-  captureInterval = 2000
+  captureInterval = 2000,
+  purpose = 'registration'  // 'registration' or 'attendance'
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [detectedFaces, setDetectedFaces] = useState([])
   const [recognitionResults, setRecognitionResults] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
+  const [faceValidationError, setFaceValidationError] = useState(null)
   const [cameraSettings, setCameraSettings] = useState({
     facingMode: 'user',
     quality: 0.8,
@@ -75,9 +77,9 @@ const CameraCapture = ({
     const initCamera = async () => {
       await startCamera()
     }
-    
+
     initCamera()
-    
+
     return () => {
       stopCamera()
       if (captureIntervalRef.current) {
@@ -96,7 +98,7 @@ const CameraCapture = ({
         }
       }, captureInterval)
     }
-    
+
     return () => {
       if (captureIntervalRef.current) {
         clearInterval(captureIntervalRef.current)
@@ -104,68 +106,141 @@ const CameraCapture = ({
     }
   }, [mode, autoCapture, isActive, captureInterval])
 
+  // Convert blob to base64
+  const blobToBase64 = (blob) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  }
+
   // Process captured image for face detection
   const processImage = async (imageData) => {
     setIsProcessing(true)
-    
+    setFaceValidationError(null)
+
     try {
-      // Simulate face detection and recognition
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Mock face detection results
-      const mockFaces = Array.from({ length: Math.min(3, maxFaces) }, (_, i) => ({
-        id: i + 1,
-        x: 100 + i * 150,
-        y: 100 + i * 20,
-        width: 120 + Math.random() * 30,
-        height: 120 + Math.random() * 30,
-        confidence: 0.7 + Math.random() * 0.3,
-        studentId: `STU${100 + i}`,
-        name: `Student ${i + 1}`,
-        status: Math.random() > 0.3 ? 'recognized' : 'unknown'
-      }))
-      
-      setDetectedFaces(mockFaces)
-      
-      // Filter recognized faces
-      const recognized = mockFaces.filter(face => face.status === 'recognized')
-      setRecognitionResults(recognized)
-      
-      if (recognized.length > 0 && onCapture) {
-        onCapture({
-          image: imageData,
-          faces: recognized,
-          mode: recognitionMode,
-          timestamp: Date.now()
-        })
-        
-        toast.success(`Recognized ${recognized.length} student(s)`)
+      // Import API
+      const { apiMethods } = await import('../../utils/api')
+
+      // Convert blob to base64 if needed
+      let base64Image
+      if (imageData.blob) {
+        base64Image = await blobToBase64(imageData.blob)
+      } else if (typeof imageData === 'string') {
+        base64Image = imageData
+      } else if (imageData.url && imageData.url.startsWith('data:')) {
+        base64Image = imageData.url
+      } else {
+        throw new Error('Invalid image format')
       }
-      
+
+      console.log('Sending image to AI service, length:', base64Image.length)
+
+      // Call AI service to detect face
+      const detectResponse = await apiMethods.detectFaces(base64Image)
+
+      if (!detectResponse.success) {
+        // Face detection failed - show error
+        setFaceValidationError(detectResponse.message || 'No human face detected')
+        toast.error(detectResponse.message || 'Human face required - please face the camera directly')
+        setDetectedFaces([])
+        return
+      }
+
+      // Face detected successfully
+      if (detectResponse.faces === 0) {
+        setFaceValidationError('No face detected - please position your face in the camera')
+        toast.error('No face detected - please position your face in the camera')
+        return
+      }
+
+      // For REGISTRATION: Just detect face, get encoding, no matching
+      if (purpose === 'registration') {
+        // Get face encoding for storage
+        const encodeResponse = await apiMethods.encodeFace(base64Image)
+
+        if (!encodeResponse.success) {
+          setFaceValidationError(encodeResponse.error || 'Failed to process face')
+          toast.error(encodeResponse.error || 'Failed to process face - please try again')
+          return
+        }
+
+        // Success! Return image and encoding (no matching done)
+        const faceData = {
+          id: 1,
+          confidence: 0.99,
+          status: 'detected',
+          encoding: encodeResponse.encoding  // 512-D FaceNet encoding
+        }
+
+        setDetectedFaces([faceData])
+
+        if (onCapture) {
+          onCapture({
+            image: { url: base64Image },  // Use base64 as the image URL
+            encoding: encodeResponse.encoding,  // 512-D encoding for DB storage
+            faces: [faceData],
+            mode: recognitionMode,
+            timestamp: Date.now(),
+            purpose: 'registration'
+          })
+
+          toast.success('Face captured successfully! Ready for registration.')
+        }
+      }
+      // For ATTENDANCE: Detect and verify/match face
+      else if (purpose === 'attendance') {
+        // This will be handled differently - matching against stored encodings
+        // The actual matching happens in the backend
+        const faceData = [{
+          id: 1,
+          confidence: detectResponse.confidence || 0.95,
+          status: 'detected'
+        }]
+
+        setDetectedFaces(faceData)
+
+        if (onCapture) {
+          onCapture({
+            image: { url: base64Image },
+            faces: faceData,
+            mode: recognitionMode,
+            timestamp: Date.now(),
+            purpose: 'attendance'
+          })
+        }
+      }
+
     } catch (error) {
-      toast.error('Face detection failed')
       console.error('Processing error:', error)
+      const errorMessage = error?.message || 'Face detection failed'
+      setFaceValidationError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsProcessing(false)
     }
   }
+
 
   const handleCapture = async () => {
     if (!isActive) {
       toast.error('Camera not ready')
       return
     }
-    
+
     if (mode === CAMERA_MODES.VIDEO && !isRecording) {
       startRecording()
       return
     }
-    
+
     if (mode === CAMERA_MODES.VIDEO && isRecording) {
       stopRecording()
       return
     }
-    
+
     // Handle photo capture
     if (cameraSettings.countdown > 0) {
       startCountdown()
@@ -183,7 +258,7 @@ const CameraCapture = ({
 
   const startCountdown = () => {
     let count = cameraSettings.countdown
-    
+
     const countdownInterval = setInterval(() => {
       if (count > 0) {
         toast(`${count}...`, { icon: '⏱️', duration: 1000 })
@@ -197,7 +272,7 @@ const CameraCapture = ({
 
   const toggleFullscreen = () => {
     if (!videoContainerRef.current) return
-    
+
     if (!isFullscreen) {
       if (videoContainerRef.current.requestFullscreen) {
         videoContainerRef.current.requestFullscreen()
@@ -207,7 +282,7 @@ const CameraCapture = ({
         document.exitFullscreen()
       }
     }
-    
+
     setIsFullscreen(!isFullscreen)
   }
 
@@ -239,7 +314,7 @@ const CameraCapture = ({
 
   const handleModeChange = (newMode) => {
     if (newMode === mode) return
-    
+
     if (newMode === CAMERA_MODES.VIDEO) {
       toast('Switching to video mode', { icon: '🎥' })
     } else if (newMode === CAMERA_MODES.SCAN) {
@@ -247,7 +322,7 @@ const CameraCapture = ({
     } else {
       toast('Switching to photo mode', { icon: '📸' })
     }
-    
+
     // Update mode logic would go here
   }
 
@@ -290,7 +365,7 @@ const CameraCapture = ({
                 <Camera size={32} className="text-gray-400" />
               </div>
               <p className="text-gray-400">
-                {permission === 'denied' 
+                {permission === 'denied'
                   ? 'Camera permission denied'
                   : 'Initializing camera...'
                 }
@@ -315,7 +390,7 @@ const CameraCapture = ({
               muted
               className="w-full h-full object-cover"
             />
-            
+
             {/* Camera Grid */}
             {cameraSettings.grid && (
               <div className="absolute inset-0 pointer-events-none">
@@ -329,7 +404,7 @@ const CameraCapture = ({
                 </div>
               </div>
             )}
-            
+
             {/* Face Detection Overlay */}
             <div className="absolute inset-0">
               {detectedFaces.map((face) => (
@@ -337,11 +412,10 @@ const CameraCapture = ({
                   key={face.id}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className={`absolute border-2 rounded-lg cursor-pointer ${
-                    face.status === 'recognized'
-                      ? 'border-green-500 bg-green-500/10'
-                      : 'border-yellow-500 bg-yellow-500/10'
-                  }`}
+                  className={`absolute border-2 rounded-lg cursor-pointer ${face.status === 'recognized'
+                    ? 'border-green-500 bg-green-500/10'
+                    : 'border-yellow-500 bg-yellow-500/10'
+                    }`}
                   style={{
                     left: `${face.x}px`,
                     top: `${face.y}px`,
@@ -351,19 +425,18 @@ const CameraCapture = ({
                   onClick={() => handleFaceSelect(face)}
                 >
                   {/* Face Label */}
-                  <div className={`absolute -top-6 left-0 px-2 py-1 rounded-md text-xs font-semibold ${
-                    face.status === 'recognized'
-                      ? 'bg-green-500 text-white'
-                      : 'bg-yellow-500 text-white'
-                  }`}>
+                  <div className={`absolute -top-6 left-0 px-2 py-1 rounded-md text-xs font-semibold ${face.status === 'recognized'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-yellow-500 text-white'
+                    }`}>
                     {face.status === 'recognized' ? face.name : 'Unknown'}
                   </div>
-                  
+
                   {/* Confidence Indicator */}
                   <div className="absolute -bottom-6 left-0 text-xs">
                     {Math.round(face.confidence * 100)}%
                   </div>
-                  
+
                   {/* Selection Indicator */}
                   {recognitionResults.find(f => f.id === face.id) && (
                     <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
@@ -375,7 +448,7 @@ const CameraCapture = ({
             </div>
           </>
         )}
-        
+
         {/* Flash Effect */}
         {cameraSettings.flash && (
           <motion.div
@@ -385,15 +458,61 @@ const CameraCapture = ({
             className="absolute inset-0 bg-white"
           />
         )}
-        
+
         {/* Processing Overlay */}
         {isProcessing && (
           <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
             <div className="text-center">
               <div className="w-16 h-16 rounded-full border-4 border-primary-500 border-t-transparent animate-spin mx-auto mb-4" />
-              <p className="text-white">Processing image...</p>
+              <p className="text-white">Detecting face with FaceNet AI...</p>
             </div>
           </div>
+        )}
+
+        {/* Face Validation Error Overlay */}
+        {faceValidationError && !isProcessing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-red-900/80 flex items-center justify-center"
+          >
+            <div className="text-center p-6 max-w-sm">
+              <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center mx-auto mb-4">
+                <AlertCircle size={32} className="text-white" />
+              </div>
+              <h3 className="text-white text-lg font-semibold mb-2">Face Detection Failed</h3>
+              <p className="text-red-200 mb-4">{faceValidationError}</p>
+              <button
+                onClick={() => setFaceValidationError(null)}
+                className="px-6 py-2 bg-white text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Success Overlay for Registration */}
+        {detectedFaces.length > 0 && detectedFaces[0].status === 'detected' && purpose === 'registration' && !isProcessing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-green-900/80 flex items-center justify-center"
+          >
+            <div className="text-center p-6 max-w-sm">
+              <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle size={32} className="text-white" />
+              </div>
+              <h3 className="text-white text-lg font-semibold mb-2">Face Captured Successfully!</h3>
+              <p className="text-green-200 mb-4">Human face detected and FaceNet encoding generated (512-D)</p>
+              <button
+                onClick={onClose}
+                className="px-6 py-2 bg-white text-green-600 rounded-lg font-medium hover:bg-green-50 transition-colors"
+              >
+                Continue Registration
+              </button>
+            </div>
+          </motion.div>
         )}
       </div>
 
@@ -404,16 +523,15 @@ const CameraCapture = ({
           <div className="flex items-center space-x-2">
             <button
               onClick={toggleFlash}
-              className={`p-3 rounded-full ${
-                cameraSettings.flash 
-                  ? 'bg-yellow-500 text-white' 
-                  : 'bg-white/20 text-white hover:bg-white/30'
-              } transition-colors`}
+              className={`p-3 rounded-full ${cameraSettings.flash
+                ? 'bg-yellow-500 text-white'
+                : 'bg-white/20 text-white hover:bg-white/30'
+                } transition-colors`}
               aria-label="Toggle flash"
             >
               <Zap size={20} />
             </button>
-            
+
             <button
               onClick={switchCamera}
               className="p-3 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
@@ -421,14 +539,13 @@ const CameraCapture = ({
             >
               <RefreshCw size={20} />
             </button>
-            
+
             <button
               onClick={toggleGrid}
-              className={`p-3 rounded-full ${
-                cameraSettings.grid 
-                  ? 'bg-primary-500 text-white' 
-                  : 'bg-white/20 text-white hover:bg-white/30'
-              } transition-colors`}
+              className={`p-3 rounded-full ${cameraSettings.grid
+                ? 'bg-primary-500 text-white'
+                : 'bg-white/20 text-white hover:bg-white/30'
+                } transition-colors`}
               aria-label="Toggle grid"
             >
               <div className="w-5 h-5 grid grid-cols-2 grid-rows-2 gap-0.5">
@@ -445,22 +562,20 @@ const CameraCapture = ({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleCapture}
-              className={`w-16 h-16 rounded-full ${
-                mode === CAMERA_MODES.VIDEO && isRecording
-                  ? 'bg-red-500 hover:bg-red-600'
-                  : 'bg-white hover:bg-gray-100'
-              } flex items-center justify-center shadow-2xl`}
-              aria-label={mode === CAMERA_MODES.VIDEO 
-                ? (isRecording ? 'Stop recording' : 'Start recording') 
+              className={`w-16 h-16 rounded-full ${mode === CAMERA_MODES.VIDEO && isRecording
+                ? 'bg-red-500 hover:bg-red-600'
+                : 'bg-white hover:bg-gray-100'
+                } flex items-center justify-center shadow-2xl`}
+              aria-label={mode === CAMERA_MODES.VIDEO
+                ? (isRecording ? 'Stop recording' : 'Start recording')
                 : 'Capture photo'
               }
             >
               {mode === CAMERA_MODES.VIDEO && isRecording ? (
                 <div className="w-6 h-6 bg-white rounded-sm" />
               ) : (
-                <div className={`w-8 h-8 rounded-full ${
-                  mode === CAMERA_MODES.VIDEO ? 'bg-red-500' : 'bg-gray-900'
-                }`} />
+                <div className={`w-8 h-8 rounded-full ${mode === CAMERA_MODES.VIDEO ? 'bg-red-500' : 'bg-gray-900'
+                  }`} />
               )}
             </motion.button>
           </div>
@@ -474,7 +589,7 @@ const CameraCapture = ({
             >
               {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
             </button>
-            
+
             <button
               onClick={() => setShowSettings(!showSettings)}
               className="p-3 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
@@ -482,7 +597,7 @@ const CameraCapture = ({
             >
               <Settings size={20} />
             </button>
-            
+
             {onClose && (
               <button
                 onClick={onClose}
@@ -501,11 +616,10 @@ const CameraCapture = ({
             <button
               key={camMode}
               onClick={() => handleModeChange(camMode)}
-              className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 ${
-                mode === camMode
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-white/10 text-white hover:bg-white/20'
-              } transition-colors`}
+              className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 ${mode === camMode
+                ? 'bg-primary-500 text-white'
+                : 'bg-white/10 text-white hover:bg-white/20'
+                } transition-colors`}
             >
               {camMode === CAMERA_MODES.VIDEO && <Video size={16} />}
               {camMode === CAMERA_MODES.SCAN && <Scan size={16} />}
@@ -536,7 +650,7 @@ const CameraCapture = ({
             className="absolute bottom-20 left-4 right-4 bg-gray-800/90 backdrop-blur-lg rounded-xl p-4"
           >
             <h4 className="text-white font-semibold mb-3">Camera Settings</h4>
-            
+
             <div className="space-y-4">
               {/* Facing Mode */}
               <div>
@@ -553,7 +667,7 @@ const CameraCapture = ({
                   <option value="environment">Rear Camera</option>
                 </select>
               </div>
-              
+
               {/* Quality */}
               <div>
                 <label className="text-sm text-gray-300 mb-1 block">
@@ -572,7 +686,7 @@ const CameraCapture = ({
                   className="w-full"
                 />
               </div>
-              
+
               {/* Countdown */}
               <div>
                 <label className="text-sm text-gray-300 mb-1 block">
@@ -612,7 +726,7 @@ const CameraCapture = ({
               Clear
             </button>
           </div>
-          
+
           <div className="flex space-x-2 overflow-x-auto max-w-xs">
             {capturedImages.map((img, index) => (
               <div
@@ -649,7 +763,7 @@ const CameraCapture = ({
               Clear
             </button>
           </div>
-          
+
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {recognitionResults.map((student) => (
               <div

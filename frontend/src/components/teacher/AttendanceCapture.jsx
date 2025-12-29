@@ -119,24 +119,80 @@ const AttendanceCapture = () => {
   const processAttendance = async (imageData) => {
     setIsProcessing(true)
     try {
-      // Try to call AI recognition API
-      // const result = await apiMethods.recognizeFaces(imageData)
+      // Get image as base64 string
+      const imageBase64 = typeof imageData === 'string' ? imageData : imageData.url || imageData
 
-      // For now, mark all students as present (AI not fully integrated)
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Call AI recognition API
+      const result = await apiMethods.recognizeAttendance({
+        classId: selectedClassId,
+        imageData: imageBase64,
+        mode: 'online'
+      })
 
-      // Update students with "recognized" status
+      if (result.success && result.data) {
+        const recognitions = result.data.recognitions || result.data.recognized || []
+        const errors = result.data.errors || []
+
+        // Update students based on recognition results
+        setStudents(prev => prev.map(student => {
+          // Find if this student was recognized
+          const recognition = recognitions.find(r =>
+            r.studentId === student._id ||
+            r.studentId === student._id?.toString()
+          )
+
+          if (recognition) {
+            return {
+              ...student,
+              status: 'present',
+              confidence: recognition.confidence || recognition.confidenceScore * 100 || 0
+            }
+          } else {
+            return {
+              ...student,
+              status: 'absent',
+              confidence: 0
+            }
+          }
+        }))
+
+        // Show results
+        const presentCount = recognitions.length
+        const totalCount = students.length
+
+        if (presentCount > 0) {
+          toast.success(`${presentCount} student(s) recognized out of ${totalCount}`)
+        } else if (errors.length > 0) {
+          toast.error(errors[0])
+        } else {
+          toast.error('No faces recognized. Please try again with clear image.')
+        }
+
+        setStep(3)
+      } else {
+        // AI service failed - show error
+        const errorMsg = result.message || result.error || 'Face recognition failed'
+        toast.error(errorMsg)
+
+        // Mark all as absent since recognition failed
+        setStudents(prev => prev.map(s => ({
+          ...s,
+          status: 'absent',
+          confidence: 0
+        })))
+        setStep(3)
+      }
+    } catch (error) {
+      console.error('Recognition error:', error)
+      toast.error('Failed to process image: ' + (error.message || 'Please try again'))
+
+      // Mark all as absent on error
       setStudents(prev => prev.map(s => ({
         ...s,
-        status: 'present',
-        confidence: s.faceRegistered ? (80 + Math.random() * 20) : 0
+        status: 'absent',
+        confidence: 0
       })))
-
       setStep(3)
-      toast.success(`${students.length} students in class. Review and submit.`)
-    } catch (error) {
-      toast.error('Failed to process image. Please try again.')
-      console.error(error)
     } finally {
       setIsProcessing(false)
     }
