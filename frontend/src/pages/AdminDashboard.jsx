@@ -24,19 +24,7 @@ import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-<<<<<<< HEAD
-  const { user } = useAuth();
-
-  // Logout handler
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    toast.success('Logged out successfully!');
-    window.location.href = '/login';
-  };
-=======
   const { user, logout } = useAuth();
->>>>>>> 74931717c3f8107625344f0ab49ed9edeea78cd7
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalTeachers: 0,
@@ -198,10 +186,7 @@ const AdminDashboard = () => {
               variant="outline"
               icon={LogOut}
               onClick={handleLogout}
-<<<<<<< HEAD
               className="text-red-600 border-red-200 hover:bg-red-50"
-=======
->>>>>>> 74931717c3f8107625344f0ab49ed9edeea78cd7
             >
               Logout
             </Button>

@@ -24,19 +24,10 @@ import toast from 'react-hot-toast';
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
-<<<<<<< HEAD
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   // Logout handler
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    toast.success('Logged out successfully!');
-    window.location.href = '/login';
-  };
-=======
-  const { user, logout } = useAuth();
->>>>>>> 74931717c3f8107625344f0ab49ed9edeea78cd7
+
   const [isLoading, setIsLoading] = useState(true);
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
@@ -133,10 +124,7 @@ const TeacherDashboard = () => {
               variant="outline"
               icon={LogOut}
               onClick={handleLogout}
-<<<<<<< HEAD
               className="text-red-600 border-red-200 hover:bg-red-50"
-=======
->>>>>>> 74931717c3f8107625344f0ab49ed9edeea78cd7
             >
               Logout
             </Button>
@@ -235,7 +223,7 @@ const TeacherDashboard = () => {
                     My Classes
                   </h2>
                 </div>
-
+  
                 {classes.length > 0 ? (
                   <div className="space-y-3">
                     {classes.slice(0, 5).map((cls, index) => (

@@ -23,7 +23,7 @@ timeout /t 2 /nobreak > nul
 
 :: Start AI-ML Service
 echo [3/3] Starting AI-ML Service...
-start "AI-ML - Port 8000" cmd /k "cd /d %ROOT_DIR%ai-ml && .\venv\Scripts\activate && python api/app.py"
+start "AI-ML - Port 8000" cmd /k "cd /d %ROOT_DIR%ai-ml && ..\venv\Scripts\python.exe api/app.py"
 
 echo.
 echo ============================================

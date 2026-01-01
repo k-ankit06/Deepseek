@@ -35,6 +35,7 @@ const AttendanceCapture = () => {
   const [classes, setClasses] = useState([])
   const [imageConfirmed, setImageConfirmed] = useState(false)
 
+
   // Fetch classes on mount
   useEffect(() => {
     fetchClasses()
@@ -116,6 +117,8 @@ const AttendanceCapture = () => {
     }
   }
 
+
+
   // Confirm image has students
   const handleConfirmImage = async () => {
     if (!imageConfirmed) {
@@ -129,7 +132,6 @@ const AttendanceCapture = () => {
   const processAttendance = async (imageData) => {
     setIsProcessing(true)
     try {
-<<<<<<< HEAD
       // Get image as base64 string
       const imageBase64 = typeof imageData === 'string' ? imageData : imageData.url || imageData
 
@@ -204,78 +206,6 @@ const AttendanceCapture = () => {
         confidence: 0
       })))
       setStep(3)
-=======
-      // Call AI recognition API
-      const imageUrl = typeof imageData === 'string' ? imageData : imageData.url || imageData
-
-      let result
-      try {
-        result = await apiMethods.recognizeFaces(imageUrl)
-      } catch (apiError) {
-        console.warn('AI service not available:', apiError)
-        result = null
-      }
-
-      // Check if AI service responded with data
-      if (result && result.success) {
-        const recognizedFaces = result.recognized || result.faces || []
-
-        if (recognizedFaces.length > 0) {
-          // AI successfully recognized faces - use AI results
-          const updatedStudents = students.map(student => {
-            const recognized = recognizedFaces.find(face =>
-              face.studentId === student._id ||
-              face.student_id === student._id ||
-              face.rollNumber === student.rollNumber
-            )
-
-            if (recognized) {
-              return {
-                ...student,
-                status: 'present',
-                confidence: (recognized.confidence || recognized.match_confidence || 0) * 100
-              }
-            } else {
-              return {
-                ...student,
-                status: 'absent',
-                confidence: 0
-              }
-            }
-          })
-
-          setStudents(updatedStudents)
-          setStep(3)
-          toast.success(`${recognizedFaces.length} face(s) detected. Please review and adjust.`)
-          return
-        }
-      }
-
-      // Fallback mode: AI didn't detect faces or service not ready
-      // Set all students to present with 0 confidence for manual review
-      const fallbackStudents = students.map(s => ({
-        ...s,
-        status: 'present',
-        confidence: 0
-      }))
-
-      setStudents(fallbackStudents)
-      setStep(3)
-      toast.info('AI face detection not available. Please manually mark attendance.')
-    } catch (error) {
-      console.error('Attendance processing error:', error)
-
-      // Even on error, allow manual marking
-      const fallbackStudents = students.map(s => ({
-        ...s,
-        status: 'present',
-        confidence: 0
-      }))
-
-      setStudents(fallbackStudents)
-      setStep(3)
-      toast.warning('Processing error. Please manually mark attendance.')
->>>>>>> 74931717c3f8107625344f0ab49ed9edeea78cd7
     } finally {
       setIsProcessing(false)
     }
