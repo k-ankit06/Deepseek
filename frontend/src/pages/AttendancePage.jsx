@@ -108,8 +108,8 @@ const AttendancePage = () => {
         <button
           onClick={() => setActiveTab('capture')}
           className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'capture'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
           <Camera className="inline mr-2" size={18} />
@@ -118,8 +118,8 @@ const AttendancePage = () => {
         <button
           onClick={() => setActiveTab('verification')}
           className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'verification'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
           <CheckCircle className="inline mr-2" size={18} />
@@ -128,8 +128,8 @@ const AttendancePage = () => {
         <button
           onClick={() => setActiveTab('history')}
           className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'history'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
           <Clock className="inline mr-2" size={18} />
@@ -241,8 +241,8 @@ const AttendancePage = () => {
                     </div>
                     <div>
                       <span className={`px-3 py-1 rounded-full text-sm ${record.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
                         }`}>
                         {record.status}
                       </span>
@@ -285,10 +285,31 @@ const AttendancePage = () => {
           </div>
           <div className="flex-1">
             <h4 className="font-medium mb-2">⚡ Quick Actions:</h4>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline">View Daily Report</Button>
-              <Button size="sm" variant="outline">Print Attendance</Button>
-              <Button size="sm" variant="outline">Message Parents</Button>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setActiveTab('history');
+                  setDate(new Date().toISOString().split('T')[0]);
+                }}
+              >
+                View Daily Report
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.print()}
+              >
+                Print Attendance
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => alert('📱 Message Parents feature coming soon!')}
+              >
+                Message Parents
+              </Button>
             </div>
           </div>
         </div>

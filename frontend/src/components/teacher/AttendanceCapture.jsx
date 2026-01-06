@@ -12,12 +12,15 @@ import {
   RefreshCw,
   UserCheck,
   UserX,
-  Loader2
+  Loader2,
+  Wifi,
+  WifiOff
 } from 'lucide-react'
 import Button from '../common/Button'
 import Card from '../common/Card'
 import CameraCapture from '../common/CameraCapture'
 import { apiMethods } from '../../utils/api'
+import { storeAttendanceOffline, getOfflineData } from '../../utils/offlineStorage'
 import toast from 'react-hot-toast'
 
 const AttendanceCapture = () => {
@@ -35,6 +38,51 @@ const AttendanceCapture = () => {
   const [classes, setClasses] = useState([])
   const [imageConfirmed, setImageConfirmed] = useState(false)
 
+  // Offline mode state
+  const [isOfflineMode, setIsOfflineMode] = useState(false)
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+
+  // Monitor network status and auto-sync when back online
+  useEffect(() => {
+    const handleOnline = async () => {
+      setIsOnline(true)
+      toast.success('Back online!')
+
+      // Auto-sync offline data when back online
+      const { syncOfflineAttendance, getOfflineAttendanceCount } = await import('../../utils/offlineStorage')
+      const offlineCount = getOfflineAttendanceCount()
+
+      if (offlineCount > 0) {
+        toast.loading(`📤 Auto-syncing ${offlineCount} offline record(s)...`, { id: 'auto-sync' })
+
+        try {
+          const result = await syncOfflineAttendance(apiMethods)
+
+          if (result.success) {
+            toast.success(`✅ Synced ${result.synced} record(s)!`, { id: 'auto-sync' })
+          } else {
+            toast.error(`⚠️ Synced ${result.synced}, Failed ${result.failed}`, { id: 'auto-sync' })
+          }
+        } catch (error) {
+          toast.error('❌ Auto-sync failed', { id: 'auto-sync' })
+        }
+      }
+    }
+
+    const handleOffline = () => {
+      setIsOnline(false)
+      setIsOfflineMode(true)
+      toast.error('You are offline. Switching to offline mode.')
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   // Fetch classes on mount
   useEffect(() => {
@@ -128,14 +176,30 @@ const AttendanceCapture = () => {
     await processAttendance(capturedImage)
   }
 
-  // Process captured image with AI
+  // Process captured image with AI (or manual mode if offline)
   const processAttendance = async (imageData) => {
     setIsProcessing(true)
     try {
       // Get image as base64 string
       const imageBase64 = typeof imageData === 'string' ? imageData : imageData.url || imageData
 
-      // Call AI recognition API
+      // OFFLINE MODE: Skip AI, go straight to manual attendance
+      if (isOfflineMode || !isOnline) {
+        toast('📴 Offline Mode: Please mark attendance manually', { icon: 'ℹ️' })
+
+        // All students start as "unknown" - teacher will manually mark
+        setStudents(prev => prev.map(s => ({
+          ...s,
+          status: 'present', // Default to present, teacher can toggle
+          confidence: 0
+        })))
+
+        setStep(3)
+        setIsProcessing(false)
+        return
+      }
+
+      // ONLINE MODE: Call AI recognition API
       const result = await apiMethods.recognizeAttendance({
         classId: selectedClassId,
         imageData: imageBase64,
@@ -226,45 +290,82 @@ const AttendanceCapture = () => {
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      // Prepare attendance data in the format expected by /attendance/mark endpoint
+      // Prepare attendance data
       const attendancePayload = {
         classId: selectedClassId,
+        className: selectedClass?.name || `Class ${selectedClass?.grade}`,
+        section: selectedClass?.section,
         date: date,
+        mode: isOfflineMode || !isOnline ? 'offline' : 'online',
         attendanceData: students.map(s => ({
           studentId: s._id,
+          studentName: `${s.firstName} ${s.lastName || ''}`.trim(),
+          rollNumber: s.rollNumber,
           status: s.status,
           confidenceScore: s.confidence || 0
-        }))
+        })),
+        timestamp: Date.now()
       }
 
-      // API call to save attendance
+      // OFFLINE MODE: Store locally
+      if (isOfflineMode || !isOnline) {
+        storeAttendanceOffline(attendancePayload)
+        toast.success('📴 Attendance saved offline! Will sync when online.')
+
+        // Reset form
+        resetForm()
+        return
+      }
+
+      // ONLINE MODE: Send to server
       const response = await apiMethods.markAttendance(attendancePayload)
 
       if (response.success) {
-        toast.success('Attendance submitted successfully!')
+        toast.success('✅ Attendance submitted successfully!')
       } else {
-        // If API fails, still show success for demo
-        toast.success('Attendance recorded locally!')
+        // If API fails, store offline
+        storeAttendanceOffline(attendancePayload)
+        toast.success('📴 Saved offline - will sync later')
       }
 
       // Reset form
-      setStep(1)
-      setSelectedClassId('')
-      setSelectedClass(null)
-      setCapturedImage(null)
-      setStudents([])
+      resetForm()
     } catch (error) {
       console.error('Submit error:', error)
-      toast.success('Attendance saved!')
-      // Reset anyway
-      setStep(1)
-      setSelectedClassId('')
-      setSelectedClass(null)
-      setCapturedImage(null)
-      setStudents([])
+
+      // On error, store offline
+      const attendancePayload = {
+        classId: selectedClassId,
+        className: selectedClass?.name || `Class ${selectedClass?.grade}`,
+        section: selectedClass?.section,
+        date: date,
+        mode: 'offline',
+        attendanceData: students.map(s => ({
+          studentId: s._id,
+          studentName: `${s.firstName} ${s.lastName || ''}`.trim(),
+          rollNumber: s.rollNumber,
+          status: s.status,
+          confidenceScore: s.confidence || 0
+        })),
+        timestamp: Date.now()
+      }
+      storeAttendanceOffline(attendancePayload)
+      toast.success('📴 Saved offline - will sync when connected')
+
+      resetForm()
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // Reset form helper
+  const resetForm = () => {
+    setStep(1)
+    setSelectedClassId('')
+    setSelectedClass(null)
+    setCapturedImage(null)
+    setStudents([])
+    setImageConfirmed(false)
   }
 
   const presentCount = students.filter(s => s.status === 'present').length
@@ -301,10 +402,48 @@ const AttendanceCapture = () => {
           animate={{ opacity: 1, y: 0 }}
         >
           <Card className="p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-              <Calendar className="mr-2" size={24} />
-              Select Class & Date
-            </h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                <Calendar className="mr-2" size={24} />
+                Select Class & Date
+              </h2>
+
+              {/* Network Status & Mode Toggle */}
+              <div className="flex items-center gap-4">
+                {/* Network Status */}
+                <div className={`flex items-center px-3 py-1 rounded-full text-sm ${isOnline ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                  {isOnline ? <Wifi size={16} className="mr-1" /> : <WifiOff size={16} className="mr-1" />}
+                  {isOnline ? 'Online' : 'Offline'}
+                </div>
+
+                {/* Mode Toggle */}
+                <label className="flex items-center cursor-pointer">
+                  <span className="mr-2 text-sm font-medium text-gray-700">
+                    {isOfflineMode ? '📴 Offline Mode' : '🌐 Online Mode'}
+                  </span>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={isOfflineMode}
+                      onChange={(e) => {
+                        setIsOfflineMode(e.target.checked)
+                        if (e.target.checked) {
+                          toast('Offline mode enabled - AI recognition disabled', { icon: '📴' })
+                        } else {
+                          toast.success('Online mode - AI recognition enabled')
+                        }
+                      }}
+                      className="sr-only"
+                    />
+                    <div className={`w-10 h-6 rounded-full transition-colors ${isOfflineMode ? 'bg-orange-500' : 'bg-blue-500'
+                      }`}></div>
+                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${isOfflineMode ? 'translate-x-4' : ''
+                      }`}></div>
+                  </div>
+                </label>
+              </div>
+            </div>
 
             {isLoading ? (
               <div className="text-center py-8">

@@ -572,21 +572,21 @@ const StudentRegistration = () => {
               <Button
                 variant="outline"
                 fullWidth
-                onClick={() => {/* Navigate to bulk upload */ }}
+                onClick={() => alert('📤 Bulk Upload feature coming soon! Use Excel template to upload multiple students.')}
               >
                 Bulk Upload Students
               </Button>
               <Button
                 variant="outline"
                 fullWidth
-                onClick={() => {/* Navigate to students list */ }}
+                onClick={() => window.location.href = '/students'}
               >
                 View All Students
               </Button>
               <Button
                 variant="outline"
                 fullWidth
-                onClick={() => {/* Navigate to attendance */ }}
+                onClick={() => window.location.href = '/attendance'}
               >
                 Take Attendance
               </Button>
