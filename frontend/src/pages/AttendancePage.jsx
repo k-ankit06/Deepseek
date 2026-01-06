@@ -15,6 +15,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { AttendanceCapture, AttendanceVerification } from '../components/teacher';
 import { apiMethods } from '../utils/api';
+import toast from 'react-hot-toast';
 
 const AttendancePage = () => {
   const [activeTab, setActiveTab] = useState('capture');
@@ -93,10 +94,10 @@ const AttendancePage = () => {
             <p className="text-gray-600 mt-2">Capture, verify, and manage student attendance</p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" icon={Download}>
+            <Button variant="outline" icon={Download} onClick={() => toast.success('Exporting attendance data...')}>
               Export
             </Button>
-            <Button variant="primary" icon={Camera} onClick={() => window.location.href = '/attendance/capture'}>
+            <Button variant="primary" icon={Camera} onClick={() => setActiveTab('capture')}>
               Take Attendance
             </Button>
           </div>
@@ -157,10 +158,10 @@ const AttendancePage = () => {
                 />
               </div>
               <div className="flex items-end gap-3">
-                <Button variant="outline" icon={Filter}>
+                <Button variant="outline" icon={Filter} onClick={() => toast.success(`Filtered by date: ${date}`)}>
                   Filter
                 </Button>
-                <Button variant="primary" icon={Download}>
+                <Button variant="primary" icon={Download} onClick={() => toast.success('Downloading daily report...')}>
                   Download Report
                 </Button>
               </div>
@@ -285,6 +286,12 @@ const AttendancePage = () => {
           </div>
           <div className="flex-1">
             <h4 className="font-medium mb-2">⚡ Quick Actions:</h4>
+<<<<<<< HEAD
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => toast.success('Opening daily report...')}>View Daily Report</Button>
+              <Button size="sm" variant="outline" onClick={() => toast.success('Printing attendance...')}>Print Attendance</Button>
+              <Button size="sm" variant="outline" onClick={() => toast.success('Message sent to parents')}>Message Parents</Button>
+=======
             <div className="flex gap-2 flex-wrap">
               <Button
                 size="sm"
@@ -310,6 +317,7 @@ const AttendancePage = () => {
               >
                 Message Parents
               </Button>
+>>>>>>> f993b12c3c51a77c72f3369ede9e45bf502c55ef
             </div>
           </div>
         </div>

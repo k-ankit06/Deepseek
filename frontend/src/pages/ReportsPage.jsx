@@ -14,6 +14,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { DailyAttendance, MonthlySummary, ReportExporter, StudentHistory } from '../components/reports';
 import { apiMethods } from '../utils/api';
+import toast from 'react-hot-toast';
 
 const ReportsPage = () => {
   const [activeTab, setActiveTab] = useState('daily');
@@ -81,7 +82,7 @@ const ReportsPage = () => {
             </h1>
             <p className="text-gray-600 mt-2">Generate and analyze attendance reports</p>
           </div>
-          <Button variant="primary" icon={Download}>
+          <Button variant="primary" icon={Download} onClick={() => toast.success('Exporting all reports...')}>
             Export All Reports
           </Button>
         </div>
@@ -154,10 +155,10 @@ const ReportsPage = () => {
             </div>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" icon={Filter}>
+            <Button variant="outline" icon={Filter} onClick={() => toast.success('Filters applied')}>
               Apply Filters
             </Button>
-            <Button variant="primary" icon={Download}>
+            <Button variant="primary" icon={Download} onClick={() => toast.success('Generating report...')}>
               Generate Report
             </Button>
           </div>
@@ -169,8 +170,8 @@ const ReportsPage = () => {
         <button
           onClick={() => setActiveTab('daily')}
           className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'daily'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
           <Calendar className="inline mr-2" size={18} />
@@ -179,8 +180,8 @@ const ReportsPage = () => {
         <button
           onClick={() => setActiveTab('monthly')}
           className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'monthly'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
           <PieChart className="inline mr-2" size={18} />
@@ -189,8 +190,8 @@ const ReportsPage = () => {
         <button
           onClick={() => setActiveTab('student')}
           className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'student'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
           <FileText className="inline mr-2" size={18} />

@@ -352,7 +352,10 @@ const AdminDashboard = () => {
               <h2 className="text-xl font-bold text-gray-800">Weekly Attendance Trend</h2>
               <p className="text-gray-600">Last 7 days performance</p>
             </div>
-            <select className="px-4 py-2 border rounded-lg">
+            <select
+              className="px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => toast.success(`Showing data for ${e.target.value}`)}
+            >
               <option>This Week</option>
               <option>Last Week</option>
               <option>This Month</option>

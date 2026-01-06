@@ -101,6 +101,7 @@ const TeacherManagementPage = () => {
         const updateData = {
           name: newTeacher.name,
           phone: newTeacher.phone,
+          assignedClasses: newTeacher.assignedClasses,
         };
         const response = await apiMethods.updateUser(editingTeacher._id, updateData);
         if (response.success) {
@@ -118,6 +119,7 @@ const TeacherManagementPage = () => {
           password: newTeacher.password,
           role: 'teacher',
           phone: newTeacher.phone,
+          assignedClasses: newTeacher.assignedClasses,
         };
         const response = await apiMethods.createUser(teacherData);
         if (response.success) {

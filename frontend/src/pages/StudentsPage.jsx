@@ -184,7 +184,7 @@ const StudentsPage = () => {
                 </option>
               ))}
             </select>
-            <Button variant="outline" icon={Download}>
+            <Button variant="outline" icon={Download} onClick={() => toast.success('Exporting student list...')}>
               Export
             </Button>
           </div>
@@ -250,8 +250,8 @@ const StudentsPage = () => {
                       </td>
                       <td className="p-3">
                         <span className={`px-3 py-1 rounded-full text-sm ${student.faceRegistered
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
                           }`}>
                           {student.faceRegistered ? 'Registered' : 'Pending'}
                         </span>
@@ -261,12 +261,14 @@ const StudentsPage = () => {
                           <button
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                             title="View Details"
+                            onClick={() => toast.success(`Viewing details for ${student.firstName}`)}
                           >
                             <Eye size={18} />
                           </button>
                           <button
                             className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
                             title="Edit"
+                            onClick={() => toast.success(`Editing ${student.firstName}`)}
                           >
                             <Edit size={18} />
                           </button>
