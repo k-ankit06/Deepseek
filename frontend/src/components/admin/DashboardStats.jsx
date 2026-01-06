@@ -110,16 +110,28 @@ const DashboardStats = () => {
         <Card>
           <h3 className="font-bold mb-4">Quick Actions</h3>
           <div className="space-y-3">
-            <button className="w-full p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 text-left">
+            <button
+              onClick={() => window.location.href = '/reports'}
+              className="w-full p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 text-left"
+            >
               View Attendance Reports
             </button>
-            <button className="w-full p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 text-left">
+            <button
+              onClick={() => window.location.href = '/student-registration'}
+              className="w-full p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 text-left"
+            >
               Add New Student
             </button>
-            <button className="w-full p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 text-left">
+            <button
+              onClick={() => window.location.href = '/reports'}
+              className="w-full p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 text-left"
+            >
               Generate Mid-Day Meal Report
             </button>
-            <button className="w-full p-3 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 text-left">
+            <button
+              onClick={() => window.location.href = '/school-setup'}
+              className="w-full p-3 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 text-left"
+            >
               System Settings
             </button>
           </div>

@@ -21,6 +21,7 @@ import Input from '../common/Input'
 import Table from '../common/Table'
 import Modal from '../common/Modal'
 import { apiMethods } from '../../utils/api'
+import { syncOfflineAttendance, getOfflineAttendanceCount } from '../../utils/offlineStorage'
 import { ATTENDANCE_STATUS } from '../../constants'
 import toast from 'react-hot-toast'
 import format from 'date-fns/format'
@@ -646,7 +647,7 @@ const AttendanceVerification = () => {
               <Button
                 variant="primary"
                 fullWidth
-                onClick={() => {/* Navigate to capture */ }}
+                onClick={() => window.location.href = '/attendance'}
               >
                 Take New Attendance
               </Button>
@@ -654,7 +655,7 @@ const AttendanceVerification = () => {
               <Button
                 variant="outline"
                 fullWidth
-                onClick={() => {/* Navigate to reports */ }}
+                onClick={() => window.location.href = '/reports'}
               >
                 Generate Report
               </Button>
@@ -662,7 +663,7 @@ const AttendanceVerification = () => {
               <Button
                 variant="outline"
                 fullWidth
-                onClick={() => {/* View trends */ }}
+                onClick={() => window.location.href = '/reports'}
               >
                 View Attendance Trends
               </Button>
@@ -670,7 +671,30 @@ const AttendanceVerification = () => {
               <Button
                 variant="ghost"
                 fullWidth
-                onClick={() => {/* Sync data */ }}
+                onClick={async () => {
+                  const offlineCount = getOfflineAttendanceCount()
+                  if (offlineCount === 0) {
+                    toast.success('✅ No offline data to sync')
+                    return
+                  }
+
+                  toast.loading(`📤 Syncing ${offlineCount} offline record(s)...`, { id: 'sync' })
+
+                  try {
+                    const result = await syncOfflineAttendance(apiMethods)
+
+                    if (result.success) {
+                      toast.success(`✅ Synced ${result.synced} record(s) successfully!`, { id: 'sync' })
+                    } else {
+                      toast.error(`⚠️ Synced ${result.synced}, Failed ${result.failed}`, { id: 'sync' })
+                    }
+
+                    // Reload attendance data
+                    loadAttendance()
+                  } catch (error) {
+                    toast.error('❌ Sync failed: ' + error.message, { id: 'sync' })
+                  }
+                }}
               >
                 Sync Offline Data
               </Button>

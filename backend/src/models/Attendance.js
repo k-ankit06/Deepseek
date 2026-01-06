@@ -34,7 +34,7 @@ const attendanceSchema = new mongoose.Schema({
   },
   recognitionMethod: {
     type: String,
-    enum: ['auto', 'manual', 'offline_auto'],
+    enum: ['auto', 'manual', 'offline_auto', 'offline_sync'],
     default: 'manual',
   },
   confidenceScore: {
