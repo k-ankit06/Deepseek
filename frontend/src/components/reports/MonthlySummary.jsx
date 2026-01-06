@@ -63,7 +63,27 @@ const MonthlySummary = () => {
       alert('No data to export');
       return;
     }
-    alert('Export feature coming soon!');
+
+    // Create CSV content
+    const headers = ['Date', 'Present', 'Absent', 'Attendance %'];
+    const rows = monthlyData.map(day => {
+      const present = day.attendance?.find(a => a.status === 'present')?.count || 0;
+      const absent = day.attendance?.find(a => a.status === 'absent')?.count || 0;
+      const total = day.total || 1;
+      const rate = Math.round((present / total) * 100);
+      return [day._id, present, absent, `${rate}%`];
+    });
+
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `monthly_report_${months[selectedMonth - 1]}_${selectedYear}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (

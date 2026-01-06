@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, School, User, Eye, EyeOff } from 'lucide-react';
 import Card from '../common/Card';
 import Button from '../common/Button';
+import toast from 'react-hot-toast';
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ const LoginForm = () => {
 
     // Simple validation
     if (!formData.email || !formData.password) {
-      alert('Please fill in all fields');
+      toast.error('Please fill in all fields');
       return;
     }
 
@@ -36,7 +37,7 @@ const LoginForm = () => {
     localStorage.setItem('token', userData.token);
 
     // Show success message
-    alert(`Welcome ${userData.name}! Login successful.`);
+    toast.success(`Welcome ${userData.name}!`);
 
     // Redirect based on role
     if (userType === 'admin') {
@@ -63,8 +64,8 @@ const LoginForm = () => {
           <button
             onClick={() => setUserType('teacher')}
             className={`flex-1 p-3 rounded-lg border-2 text-center ${userType === 'teacher'
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-200 text-gray-700 hover:border-gray-300'
+              ? 'border-blue-500 bg-blue-50 text-blue-700'
+              : 'border-gray-200 text-gray-700 hover:border-gray-300'
               }`}
           >
             <User className="mx-auto mb-2" size={20} />
@@ -73,8 +74,8 @@ const LoginForm = () => {
           <button
             onClick={() => setUserType('admin')}
             className={`flex-1 p-3 rounded-lg border-2 text-center ${userType === 'admin'
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-200 text-gray-700 hover:border-gray-300'
+              ? 'border-blue-500 bg-blue-50 text-blue-700'
+              : 'border-gray-200 text-gray-700 hover:border-gray-300'
               }`}
           >
             <User className="mx-auto mb-2" size={20} />
@@ -132,7 +133,13 @@ const LoginForm = () => {
             <button
               type="button"
               className="text-sm text-blue-600 hover:text-blue-800"
-              onClick={() => alert('Password reset link sent!')}
+              onClick={() => {
+                if (formData.email) {
+                  toast.success(`📧 Password reset link sent to ${formData.email}`);
+                } else {
+                  toast.error('Enter your email first');
+                }
+              }}
             >
               Forgot Password?
             </button>

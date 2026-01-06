@@ -572,7 +572,18 @@ const StudentRegistration = () => {
               <Button
                 variant="outline"
                 fullWidth
-                onClick={() => alert('📤 Bulk Upload feature coming soon! Use Excel template to upload multiple students.')}
+                onClick={() => {
+                  // Download sample CSV template
+                  const template = 'Roll Number,First Name,Last Name,Gender,Date of Birth,Parent Name,Parent Phone,Parent Email,Address\n1001,Sample,Student,male,2015-01-15,Parent Name,9876543210,parent@email.com,123 Street';
+                  const blob = new Blob([template], { type: 'text/csv' });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'student_upload_template.csv';
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                  toast.success('📥 Template downloaded! Fill it and email to admin for bulk import.');
+                }}
               >
                 Bulk Upload Students
               </Button>

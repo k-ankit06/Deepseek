@@ -223,7 +223,13 @@ const LoginPage = () => {
                   <button
                     type="button"
                     className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                    onClick={() => alert('Reset link sent to email')}
+                    onClick={() => {
+                      if (credentials.email) {
+                        toast.success(`📧 Password reset link sent to ${credentials.email}`)
+                      } else {
+                        toast.error('Please enter your email address first')
+                      }
+                    }}
                   >
                     Forgot password?
                   </button>

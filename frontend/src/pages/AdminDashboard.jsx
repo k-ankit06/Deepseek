@@ -133,12 +133,49 @@ const AdminDashboard = () => {
     }
   ];
 
-  const handleExportReport = () => {
-    alert('Report exported successfully!');
+  const handleExportReport = async () => {
+    try {
+      // Get today's date for filename
+      const today = new Date().toISOString().split('T')[0];
+
+      // Fetch attendance data
+      const response = await apiMethods.getDailyAttendance({ date: today });
+
+      if (response?.data && response.data.length > 0) {
+        // Create CSV content
+        const headers = ['Date', 'Student Name', 'Roll Number', 'Status', 'Time'];
+        const rows = response.data.map(record => [
+          today,
+          record.student?.firstName + ' ' + (record.student?.lastName || ''),
+          record.student?.rollNumber || '',
+          record.status,
+          new Date(record.markedAt).toLocaleTimeString()
+        ]);
+
+        const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+
+        // Download CSV
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `attendance_report_${today}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+
+        toast.success('📊 Report exported successfully!');
+      } else {
+        toast.error('No attendance data found for today');
+        navigate('/reports');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      navigate('/reports');
+    }
   };
 
   const handleMarkAllRead = () => {
-    alert('All notifications marked as read');
+    toast.success('✅ All notifications marked as read');
   };
 
   const handleLogout = async () => {

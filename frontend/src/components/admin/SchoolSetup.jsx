@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { School, MapPin, Phone, User, Save } from 'lucide-react';
 import Card from '../common/Card';
 import Button from '../common/Button';
+import toast from 'react-hot-toast';
 
 const SchoolSetup = () => {
   const [schoolInfo, setSchoolInfo] = useState({
@@ -15,7 +16,8 @@ const SchoolSetup = () => {
   });
 
   const handleSave = () => {
-    alert('School information saved successfully!');
+    localStorage.setItem('school_info', JSON.stringify(schoolInfo));
+    toast.success('✅ School information saved successfully!');
   };
 
   return (
@@ -37,7 +39,7 @@ const SchoolSetup = () => {
             <input
               type="text"
               value={schoolInfo.name}
-              onChange={(e) => setSchoolInfo({...schoolInfo, name: e.target.value})}
+              onChange={(e) => setSchoolInfo({ ...schoolInfo, name: e.target.value })}
               className="w-full p-3 border rounded-lg"
             />
           </div>
@@ -49,7 +51,7 @@ const SchoolSetup = () => {
             </label>
             <textarea
               value={schoolInfo.address}
-              onChange={(e) => setSchoolInfo({...schoolInfo, address: e.target.value})}
+              onChange={(e) => setSchoolInfo({ ...schoolInfo, address: e.target.value })}
               className="w-full p-3 border rounded-lg h-24"
             />
           </div>
@@ -63,7 +65,7 @@ const SchoolSetup = () => {
               <input
                 type="tel"
                 value={schoolInfo.phone}
-                onChange={(e) => setSchoolInfo({...schoolInfo, phone: e.target.value})}
+                onChange={(e) => setSchoolInfo({ ...schoolInfo, phone: e.target.value })}
                 className="w-full p-3 border rounded-lg"
               />
             </div>
@@ -76,7 +78,7 @@ const SchoolSetup = () => {
               <input
                 type="text"
                 value={schoolInfo.principal}
-                onChange={(e) => setSchoolInfo({...schoolInfo, principal: e.target.value})}
+                onChange={(e) => setSchoolInfo({ ...schoolInfo, principal: e.target.value })}
                 className="w-full p-3 border rounded-lg"
               />
             </div>
@@ -87,7 +89,7 @@ const SchoolSetup = () => {
               <input
                 type="email"
                 value={schoolInfo.email}
-                onChange={(e) => setSchoolInfo({...schoolInfo, email: e.target.value})}
+                onChange={(e) => setSchoolInfo({ ...schoolInfo, email: e.target.value })}
                 className="w-full p-3 border rounded-lg"
               />
             </div>
@@ -98,7 +100,7 @@ const SchoolSetup = () => {
               <input
                 type="number"
                 value={schoolInfo.established}
-                onChange={(e) => setSchoolInfo({...schoolInfo, established: e.target.value})}
+                onChange={(e) => setSchoolInfo({ ...schoolInfo, established: e.target.value })}
                 className="w-full p-3 border rounded-lg"
               />
             </div>
@@ -109,7 +111,7 @@ const SchoolSetup = () => {
             <label className="block font-medium mb-2">School Type</label>
             <select
               value={schoolInfo.type}
-              onChange={(e) => setSchoolInfo({...schoolInfo, type: e.target.value})}
+              onChange={(e) => setSchoolInfo({ ...schoolInfo, type: e.target.value })}
               className="w-full p-3 border rounded-lg"
             >
               <option>Primary School</option>

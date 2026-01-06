@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Download, FileText, PieChart, Users, Calendar } from 'lucide-react';
 import Card from '../common/Card';
 import Button from '../common/Button';
+import toast from 'react-hot-toast';
+import { apiMethods } from '../../utils/api';
 
 const ReportExporter = () => {
   const [reportType, setReportType] = useState('daily');
@@ -15,8 +17,40 @@ const ReportExporter = () => {
     { id: 'midday', name: 'Mid-Day Meal', icon: FileText },
   ];
 
-  const handleExport = () => {
-    alert(`${reportType} report exported as ${format.toUpperCase()}!`);
+  const handleExport = async () => {
+    toast.loading('Generating report...', { id: 'export' });
+
+    try {
+      const response = await apiMethods.getDailyAttendance({ date });
+
+      if (response?.data && response.data.length > 0) {
+        const headers = ['Date', 'Student Name', 'Roll Number', 'Status', 'Time'];
+        const rows = response.data.map(record => [
+          date,
+          record.student?.firstName + ' ' + (record.student?.lastName || ''),
+          record.student?.rollNumber || '',
+          record.status,
+          record.markedAt ? new Date(record.markedAt).toLocaleTimeString() : ''
+        ]);
+
+        const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${reportType}_report_${date}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+
+        toast.success(`✅ ${reportType} report downloaded as CSV!`, { id: 'export' });
+      } else {
+        toast.error('No data found for selected date', { id: 'export' });
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to generate report', { id: 'export' });
+    }
   };
 
   return (
@@ -35,11 +69,10 @@ const ReportExporter = () => {
               <button
                 key={type.id}
                 onClick={() => setReportType(type.id)}
-                className={`p-4 border-2 rounded-lg text-left ${
-                  reportType === type.id 
-                    ? 'border-blue-500 bg-blue-50' 
+                className={`p-4 border-2 rounded-lg text-left ${reportType === type.id
+                    ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 <type.icon className="mb-2" />
                 <div className="font-medium">{type.name}</div>
@@ -81,11 +114,10 @@ const ReportExporter = () => {
               <button
                 key={fmt}
                 onClick={() => setFormat(fmt)}
-                className={`px-4 py-2 border rounded-lg ${
-                  format === fmt 
-                    ? 'bg-blue-600 text-white border-blue-600' 
+                className={`px-4 py-2 border rounded-lg ${format === fmt
+                    ? 'bg-blue-600 text-white border-blue-600'
                     : 'border-gray-300 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 {fmt.toUpperCase()}
               </button>
@@ -105,8 +137,8 @@ const ReportExporter = () => {
         </div>
 
         {/* Export Button */}
-        <Button 
-          onClick={handleExport} 
+        <Button
+          onClick={handleExport}
           icon={Download}
           className="w-full"
         >

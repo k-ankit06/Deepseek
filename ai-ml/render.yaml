@@ -1,0 +1,19 @@
+# Render Blueprint for AI-ML Service
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: attendance-ai-service
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --timeout 120 --workers 1 api.app:app
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: PORT
+        value: 8000
+      - key: FLASK_ENV
+        value: production

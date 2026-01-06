@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, Lock, School, Eye, EyeOff } from 'lucide-react';
 import Card from '../common/Card';
 import Button from '../common/Button';
+import toast from 'react-hot-toast';
 
 const RegisterForm = () => {
   const navigate = useNavigate();
@@ -18,10 +19,10 @@ const RegisterForm = () => {
 
   const handleRegister = (e) => {
     e.preventDefault();
-    
+
     // Validation
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match!');
+      toast.error('Passwords do not match!');
       return;
     }
 
@@ -37,7 +38,7 @@ const RegisterForm = () => {
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('token', userData.token);
 
-    alert('Registration successful! Please login.');
+    toast.success('Registration successful! Please login.');
     navigate('/login');
   };
 
@@ -63,7 +64,7 @@ const RegisterForm = () => {
                 type="text"
                 placeholder="Enter your name"
                 value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full pl-10 pr-4 py-3 border rounded-lg"
                 required
               />
@@ -79,7 +80,7 @@ const RegisterForm = () => {
                 type="email"
                 placeholder="Enter school email"
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full pl-10 pr-4 py-3 border rounded-lg"
                 required
               />
@@ -95,7 +96,7 @@ const RegisterForm = () => {
                 type="tel"
                 placeholder="Enter phone number"
                 value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full pl-10 pr-4 py-3 border rounded-lg"
               />
             </div>
@@ -108,7 +109,7 @@ const RegisterForm = () => {
               type="text"
               placeholder="Enter school code if available"
               value={formData.schoolCode}
-              onChange={(e) => setFormData({...formData, schoolCode: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, schoolCode: e.target.value })}
               className="w-full px-4 py-3 border rounded-lg"
             />
           </div>
@@ -122,7 +123,7 @@ const RegisterForm = () => {
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Create password"
                 value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="w-full pl-10 pr-12 py-3 border rounded-lg"
                 required
               />
@@ -143,7 +144,7 @@ const RegisterForm = () => {
               type="password"
               placeholder="Confirm password"
               value={formData.confirmPassword}
-              onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               className="w-full px-4 py-3 border rounded-lg"
               required
             />

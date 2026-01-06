@@ -16,6 +16,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import ToggleSwitch from '../components/common/ToggleSwitch';
 import Input from '../components/common/Input';
+import toast from 'react-hot-toast';
 
 const SettingsPage = () => {
   const [settings, setSettings] = useState({
@@ -49,13 +50,35 @@ const SettingsPage = () => {
   });
 
   const handleSave = () => {
-    // Save settings logic
-    alert('Settings saved successfully!');
+    // Save settings to localStorage
+    localStorage.setItem('app_settings', JSON.stringify(settings));
+    toast.success('✅ Settings saved successfully!');
   };
 
   const handleReset = () => {
-    // Reset settings logic
-    alert('Settings reset to defaults!');
+    const defaultSettings = {
+      schoolName: 'Rural Primary School',
+      schoolAddress: '123 Education Street, Village',
+      contactEmail: 'info@school.edu',
+      contactPhone: '+1234567890',
+      autoAttendance: true,
+      faceRecognition: true,
+      manualEntry: true,
+      lateThreshold: 10,
+      emailNotifications: true,
+      smsNotifications: false,
+      parentNotifications: true,
+      dailyReports: true,
+      twoFactorAuth: false,
+      sessionTimeout: 30,
+      passwordExpiry: 90,
+      cameraQuality: 'high',
+      recognitionThreshold: 85,
+      retryAttempts: 3,
+    };
+    setSettings(defaultSettings);
+    localStorage.removeItem('app_settings');
+    toast.success('🔄 Settings reset to defaults!');
   };
 
   const handleChange = (field, value) => {
