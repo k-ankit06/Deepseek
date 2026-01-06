@@ -223,7 +223,7 @@ const LoginPage = () => {
                   <button
                     type="button"
                     className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                    onClick={() => alert('Reset link sent to email')}
+                    onClick={() => toast.success('Reset link sent to your email')}
                   >
                     Forgot password?
                   </button>

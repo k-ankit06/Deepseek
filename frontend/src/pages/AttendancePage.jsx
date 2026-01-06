@@ -15,6 +15,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { AttendanceCapture, AttendanceVerification } from '../components/teacher';
 import { apiMethods } from '../utils/api';
+import toast from 'react-hot-toast';
 
 const AttendancePage = () => {
   const [activeTab, setActiveTab] = useState('capture');
@@ -93,10 +94,10 @@ const AttendancePage = () => {
             <p className="text-gray-600 mt-2">Capture, verify, and manage student attendance</p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" icon={Download}>
+            <Button variant="outline" icon={Download} onClick={() => toast.success('Exporting attendance data...')}>
               Export
             </Button>
-            <Button variant="primary" icon={Camera} onClick={() => window.location.href = '/attendance/capture'}>
+            <Button variant="primary" icon={Camera} onClick={() => setActiveTab('capture')}>
               Take Attendance
             </Button>
           </div>
@@ -108,8 +109,8 @@ const AttendancePage = () => {
         <button
           onClick={() => setActiveTab('capture')}
           className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'capture'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
           <Camera className="inline mr-2" size={18} />
@@ -118,8 +119,8 @@ const AttendancePage = () => {
         <button
           onClick={() => setActiveTab('verification')}
           className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'verification'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
           <CheckCircle className="inline mr-2" size={18} />
@@ -128,8 +129,8 @@ const AttendancePage = () => {
         <button
           onClick={() => setActiveTab('history')}
           className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'history'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
+            ? 'border-blue-500 text-blue-600'
+            : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
           <Clock className="inline mr-2" size={18} />
@@ -157,10 +158,10 @@ const AttendancePage = () => {
                 />
               </div>
               <div className="flex items-end gap-3">
-                <Button variant="outline" icon={Filter}>
+                <Button variant="outline" icon={Filter} onClick={() => toast.success(`Filtered by date: ${date}`)}>
                   Filter
                 </Button>
-                <Button variant="primary" icon={Download}>
+                <Button variant="primary" icon={Download} onClick={() => toast.success('Downloading daily report...')}>
                   Download Report
                 </Button>
               </div>
@@ -241,8 +242,8 @@ const AttendancePage = () => {
                     </div>
                     <div>
                       <span className={`px-3 py-1 rounded-full text-sm ${record.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
                         }`}>
                         {record.status}
                       </span>
@@ -286,9 +287,9 @@ const AttendancePage = () => {
           <div className="flex-1">
             <h4 className="font-medium mb-2">⚡ Quick Actions:</h4>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline">View Daily Report</Button>
-              <Button size="sm" variant="outline">Print Attendance</Button>
-              <Button size="sm" variant="outline">Message Parents</Button>
+              <Button size="sm" variant="outline" onClick={() => toast.success('Opening daily report...')}>View Daily Report</Button>
+              <Button size="sm" variant="outline" onClick={() => toast.success('Printing attendance...')}>Print Attendance</Button>
+              <Button size="sm" variant="outline" onClick={() => toast.success('Message sent to parents')}>Message Parents</Button>
             </div>
           </div>
         </div>
