@@ -286,38 +286,10 @@ const AttendancePage = () => {
           </div>
           <div className="flex-1">
             <h4 className="font-medium mb-2">⚡ Quick Actions:</h4>
-<<<<<<< HEAD
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button size="sm" variant="outline" onClick={() => toast.success('Opening daily report...')}>View Daily Report</Button>
               <Button size="sm" variant="outline" onClick={() => toast.success('Printing attendance...')}>Print Attendance</Button>
               <Button size="sm" variant="outline" onClick={() => toast.success('Message sent to parents')}>Message Parents</Button>
-=======
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setActiveTab('history');
-                  setDate(new Date().toISOString().split('T')[0]);
-                }}
-              >
-                View Daily Report
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => window.print()}
-              >
-                Print Attendance
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => alert('📱 Message Parents feature coming soon!')}
-              >
-                Message Parents
-              </Button>
->>>>>>> f993b12c3c51a77c72f3369ede9e45bf502c55ef
             </div>
           </div>
         </div>
