@@ -341,10 +341,11 @@ const StudentRegistrationPage = () => {
                 >
                   Camera
                 </Button>
-                <label className="flex-1">
-                  <Button variant="outline" icon={Upload} className="w-full">
-                    Upload
-                  </Button>
+                <label className="flex-1 cursor-pointer">
+                  <div className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    <Upload size={18} />
+                    <span>Upload</span>
+                  </div>
                   <input
                     type="file"
                     accept="image/*"
