@@ -3,15 +3,11 @@ Flask API for Face Recognition Service
 Production-Ready, Stable Server
 """
 
-import sys
-import os
-
-# Add parent directory to path for imports (required for gunicorn on Render)
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from face_service import FaceRecognitionService
+
+# Import from same directory
+from api.face_service import FaceRecognitionService
 
 app = Flask(__name__)
 CORS(app)
