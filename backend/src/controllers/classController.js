@@ -83,8 +83,11 @@ const createClass = asyncHandler(async (req, res) => {
   const currentYear = new Date().getFullYear();
   const academicYear = req.body.academicYear || `${currentYear}-${currentYear + 1}`;
 
-  // Check if class already exists
+  // Check if class with same NAME already exists in this grade/section
+  // This allows multiple subjects (Math, English, Science) in same grade/section
+  const className = name || `Class ${grade}`;
   const existingClass = await Class.findOne({
+    name: className,
     grade,
     section,
     academicYear,
@@ -94,7 +97,7 @@ const createClass = asyncHandler(async (req, res) => {
   if (existingClass) {
     return res.status(400).json({
       success: false,
-      message: 'Class with this grade, section, and academic year already exists'
+      message: `Class "${className}" already exists for Grade ${grade}, Section ${section}`
     });
   }
 
@@ -146,12 +149,14 @@ const updateClass = asyncHandler(async (req, res) => {
   const { name, grade, section, academicYear, teacher, subjects, schedule, isActive } = req.body;
 
   // Check if updating to a combination that already exists
-  if (grade || section || academicYear) {
+  if (name || grade || section || academicYear) {
+    const newName = name || classObj.name;
     const newGrade = grade || classObj.grade;
     const newSection = section || classObj.section;
     const newAcademicYear = academicYear || classObj.academicYear;
 
     const existingClass = await Class.findOne({
+      name: newName,
       grade: newGrade,
       section: newSection,
       academicYear: newAcademicYear,
@@ -162,7 +167,7 @@ const updateClass = asyncHandler(async (req, res) => {
     if (existingClass) {
       return res.status(400).json({
         success: false,
-        message: 'Class with this grade, section, and academic year already exists'
+        message: `Class "${newName}" already exists for Grade ${newGrade}, Section ${newSection}`
       });
     }
   }
