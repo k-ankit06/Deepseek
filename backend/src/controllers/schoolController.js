@@ -66,19 +66,35 @@ const createSchool = async (req, res) => {
   }
 };
 
-// @desc    Get all schools
+// @desc    Get all schools (returns only user's school for data isolation)
 // @route   GET /api/schools
 // @access  Private/Admin
 const getSchools = async (req, res) => {
   try {
-    const schools = await School.find({ isActive: true })
-      .select('-__v')
-      .sort({ createdAt: -1 });
+    // For data isolation, only return user's own school
+    if (!req.user.school) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        data: [],
+      });
+    }
+
+    const school = await School.findById(req.user.school)
+      .select('-__v');
+
+    if (!school) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        data: [],
+      });
+    }
 
     res.status(200).json({
       success: true,
-      count: schools.length,
-      data: schools,
+      count: 1,
+      data: [school],
     });
   } catch (error) {
     console.error('Get schools error:', error);

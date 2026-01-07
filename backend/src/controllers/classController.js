@@ -10,12 +10,14 @@ const { asyncHandler } = require('../middleware/errorMiddleware');
  */
 const getClasses = asyncHandler(async (req, res) => {
   // Always filter by user's school for data isolation
-  const filter = {};
-
-  // If user has a school, always filter by it
-  if (req.user.school) {
-    filter.school = req.user.school;
+  if (!req.user.school) {
+    return res.status(403).json({
+      success: false,
+      message: 'No school assigned. Please contact administrator.'
+    });
   }
+
+  const filter = { school: req.user.school };
 
   const classes = await Class.find(filter)
     .populate('teacher', 'name')
@@ -68,24 +70,14 @@ const getClass = asyncHandler(async (req, res) => {
 const createClass = asyncHandler(async (req, res) => {
   const { name, grade, section, subjects, schedule } = req.body;
 
-  // For demo mode or when school is not specified, create or use default school
-  let schoolId = req.user.school || req.body.school;
-
-  // If no school, try to find or create a default one
-  if (!schoolId) {
-    const currentYear = new Date().getFullYear();
-    let defaultSchool = await School.findOne({ code: 'DEMO001' });
-    if (!defaultSchool) {
-      defaultSchool = await School.create({
-        name: 'Demo School',
-        code: 'DEMO001',
-        address: { street: 'Demo Street', city: 'Demo City', state: 'Demo State', pincode: '123456' },
-        contact: { phone: '1234567890', email: 'demo@school.com', principalName: 'Demo Principal' },
-        academicYear: `${currentYear}-${currentYear + 1}`
-      });
-    }
-    schoolId = defaultSchool._id;
+  // User must have a school assigned (data isolation)
+  if (!req.user.school) {
+    return res.status(403).json({
+      success: false,
+      message: 'No school assigned. Please set up your school first.'
+    });
   }
+  const schoolId = req.user.school;
 
   // Generate academic year if not provided
   const currentYear = new Date().getFullYear();

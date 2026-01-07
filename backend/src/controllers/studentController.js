@@ -16,10 +16,14 @@ const getStudents = async (req, res) => {
       isActive: isActive === 'true' || isActive === true,
     };
 
-    // Only filter by school if user has one (demo mode might not)
-    if (schoolId) {
-      searchCriteria.school = schoolId;
+    // Always filter by user's school (required for data isolation)
+    if (!schoolId) {
+      return res.status(403).json({
+        success: false,
+        message: 'No school assigned. Please contact administrator.',
+      });
     }
+    searchCriteria.school = schoolId;
 
     if (classId) {
       searchCriteria.class = classId;
@@ -90,7 +94,14 @@ const registerStudent = async (req, res) => {
     } = req.body;
 
     // Get school from logged-in user (required for data isolation)
-    let schoolId = req.user.school;
+    const schoolId = req.user.school;
+
+    if (!schoolId) {
+      return res.status(403).json({
+        success: false,
+        message: 'No school assigned. Please set up your school first.',
+      });
+    }
 
     // Check if roll number already exists in the school
     const existingStudent = await Student.findOne({
@@ -105,30 +116,17 @@ const registerStudent = async (req, res) => {
       });
     }
 
-    // Find the class - in demo mode, don't require school match
-    let studentClass;
-    if (schoolId) {
-      studentClass = await Class.findOne({
-        _id: classId,
-        school: schoolId,
-      });
-    }
-
-    // If not found with school, try finding just by ID
-    if (!studentClass) {
-      studentClass = await Class.findById(classId);
-    }
+    // Find the class - must belong to user's school
+    const studentClass = await Class.findOne({
+      _id: classId,
+      school: schoolId,
+    });
 
     if (!studentClass) {
       return res.status(404).json({
         success: false,
-        message: 'Class not found',
+        message: 'Class not found or not in your school',
       });
-    }
-
-    // Use the class's school if we don't have one
-    if (!schoolId && studentClass.school) {
-      schoolId = studentClass.school;
     }
 
     // Create student with face data
