@@ -383,20 +383,20 @@ const createClass = async (req, res) => {
 // @access  Private
 const getSchoolProfile = async (req, res) => {
   try {
-    let school;
-
-    // If user has a school, use that, otherwise find first school
-    if (req.user.school) {
-      school = await School.findById(req.user.school);
-    } else {
-      // Demo mode - get first school
-      school = await School.findOne();
+    // User must have a school assigned
+    if (!req.user.school) {
+      return res.status(404).json({
+        success: false,
+        message: 'No school found. Please set up your school first.',
+      });
     }
+
+    const school = await School.findById(req.user.school);
 
     if (!school) {
       return res.status(404).json({
         success: false,
-        message: 'No school found. Please set up your school first.',
+        message: 'School not found. Please contact support.',
       });
     }
 
@@ -418,15 +418,15 @@ const getSchoolProfile = async (req, res) => {
 // @access  Private/Admin
 const updateSchoolProfile = async (req, res) => {
   try {
-    let school;
-
-    // If user has a school, use that, otherwise find first school
-    if (req.user.school) {
-      school = await School.findById(req.user.school);
-    } else {
-      // Demo mode - get first school
-      school = await School.findOne();
+    // User must have a school assigned
+    if (!req.user.school) {
+      return res.status(404).json({
+        success: false,
+        message: 'No school found. Please set up your school first.',
+      });
     }
+
+    const school = await School.findById(req.user.school);
 
     if (!school) {
       return res.status(404).json({
