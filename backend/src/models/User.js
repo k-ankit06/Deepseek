@@ -36,6 +36,23 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  // Teacher specific fields
+  subjects: [{
+    type: String,
+    trim: true,
+  }],
+  assignedClasses: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Class',
+  }],
+  qualification: {
+    type: String,
+    default: '',
+  },
+  specialization: {
+    type: String,
+    default: '',
+  },
   isActive: {
     type: Boolean,
     default: true,

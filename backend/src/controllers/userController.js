@@ -32,7 +32,7 @@ const getUsers = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const createUser = asyncHandler(async (req, res) => {
-  const { name, email, password, phone, role, classes } = req.body;
+  const { name, email, password, phone, role, subjects, assignedClasses, qualification, specialization } = req.body;
 
   // Check if user already exists
   const existingUser = await User.findOne({ email });
@@ -53,7 +53,7 @@ const createUser = asyncHandler(async (req, res) => {
     });
   }
 
-  // Create user
+  // Create user with teacher-specific fields
   const user = await User.create({
     name,
     email,
@@ -61,7 +61,10 @@ const createUser = asyncHandler(async (req, res) => {
     phone,
     role: role || 'teacher',
     school: schoolId,
-    classes: classes || []
+    subjects: subjects || [],
+    assignedClasses: assignedClasses || [],
+    qualification: qualification || '',
+    specialization: specialization || ''
   });
 
   res.status(201).json({
@@ -73,7 +76,11 @@ const createUser = asyncHandler(async (req, res) => {
       email: user.email,
       phone: user.phone,
       role: user.role,
-      school: user.school
+      school: user.school,
+      subjects: user.subjects,
+      assignedClasses: user.assignedClasses,
+      qualification: user.qualification,
+      specialization: user.specialization
     }
   });
 });
@@ -115,7 +122,7 @@ const getUserById = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const updateUser = asyncHandler(async (req, res) => {
-  const { name, email, phone, role, isActive } = req.body;
+  const { name, email, phone, role, isActive, subjects, assignedClasses, qualification, specialization } = req.body;
 
   const user = await User.findById(req.params.id);
 
@@ -150,6 +157,12 @@ const updateUser = asyncHandler(async (req, res) => {
   user.email = email || user.email;
   user.phone = phone || user.phone;
 
+  // Update teacher-specific fields
+  if (subjects !== undefined) user.subjects = subjects;
+  if (assignedClasses !== undefined) user.assignedClasses = assignedClasses;
+  if (qualification !== undefined) user.qualification = qualification;
+  if (specialization !== undefined) user.specialization = specialization;
+
   // Only admin can change role and active status
   if (req.user.role === 'admin') {
     if (role) user.role = role;
@@ -168,7 +181,11 @@ const updateUser = asyncHandler(async (req, res) => {
       phone: user.phone,
       role: user.role,
       isActive: user.isActive,
-      school: user.school
+      school: user.school,
+      subjects: user.subjects,
+      assignedClasses: user.assignedClasses,
+      qualification: user.qualification,
+      specialization: user.specialization
     }
   });
 });
