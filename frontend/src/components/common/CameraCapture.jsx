@@ -358,8 +358,18 @@ const CameraCapture = ({
     >
       {/* Camera View */}
       <div className="relative aspect-video bg-black">
-        {!isActive ? (
-          <div className="absolute inset-0 flex items-center justify-center">
+        {/* Video Feed - ALWAYS rendered so ref is available */}
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className={`w-full h-full object-cover ${!isActive ? 'opacity-0' : 'opacity-100'}`}
+        />
+
+        {/* Loading/Error Overlay */}
+        {!isActive && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black">
             <div className="text-center">
               <div className="w-20 h-20 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-4">
                 <Camera size={32} className="text-gray-400" />
@@ -380,16 +390,11 @@ const CameraCapture = ({
               )}
             </div>
           </div>
-        ) : (
+        )}
+
+        {/* Active Camera Content */}
+        {isActive && (
           <>
-            {/* Video Feed */}
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-            />
 
             {/* Camera Grid */}
             {cameraSettings.grid && (
