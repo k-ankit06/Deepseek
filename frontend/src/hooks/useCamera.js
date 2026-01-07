@@ -15,7 +15,7 @@ export const useCamera = (options = {}) => {
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
-  
+
   const [isActive, setIsActive] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [error, setError] = useState(null)
@@ -29,8 +29,8 @@ export const useCamera = (options = {}) => {
   const requestPermission = useCallback(async () => {
     try {
       setError(null)
-      
-      const constraints = {
+
+      const videoConstraints = {
         video: {
           facingMode,
           width: { ideal: maxWidth },
@@ -39,30 +39,45 @@ export const useCamera = (options = {}) => {
         },
         audio: false
       }
-      
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
-      
+
+      console.log('Requesting camera with constraints:', videoConstraints)
+      const stream = await navigator.mediaDevices.getUserMedia(videoConstraints)
+      console.log('Got stream:', stream)
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream
+        // Wait for video to be ready and play
+        try {
+          await videoRef.current.play()
+          console.log('Video playing successfully')
+        } catch (playError) {
+          console.error('Video play error:', playError)
+          // Try again with muted (required for autoplay in some browsers)
+          videoRef.current.muted = true
+          await videoRef.current.play()
+        }
       }
-      
+
       streamRef.current = stream
       setIsActive(true)
       setPermission('granted')
-      
+
       return { success: true, stream }
     } catch (err) {
+      console.error('Camera error:', err)
       setError(err.message)
       setPermission('denied')
-      
+
       if (err.name === 'NotAllowedError') {
         toast.error('Camera permission denied. Please enable camera access.')
       } else if (err.name === 'NotFoundError') {
         toast.error('No camera found. Please connect a camera.')
+      } else if (err.name === 'NotReadableError') {
+        toast.error('Camera is being used by another application.')
       } else {
         toast.error('Failed to access camera: ' + err.message)
       }
-      
+
       return { success: false, error: err }
     }
   }, [facingMode, maxWidth, maxHeight, options.constraints])
@@ -70,7 +85,7 @@ export const useCamera = (options = {}) => {
   // Start camera
   const startCamera = useCallback(async () => {
     if (isActive) return
-    
+
     const result = await requestPermission()
     return result
   }, [isActive, requestPermission])
@@ -83,15 +98,15 @@ export const useCamera = (options = {}) => {
       })
       streamRef.current = null
     }
-    
+
     if (videoRef.current) {
       videoRef.current.srcObject = null
     }
-    
+
     setIsActive(false)
     setIsRecording(false)
     setFaces([])
-    
+
     // Clear recording interval
     if (recordingInterval.current) {
       clearInterval(recordingInterval.current)
@@ -105,17 +120,17 @@ export const useCamera = (options = {}) => {
       toast.error('Camera is not active')
       return null
     }
-    
+
     try {
       const video = videoRef.current
       const canvas = canvasRef.current || document.createElement('canvas')
-      
+
       canvas.width = video.videoWidth
       canvas.height = video.videoHeight
-      
+
       const context = canvas.getContext('2d')
       context.drawImage(video, 0, 0, canvas.width, canvas.height)
-      
+
       // Convert to blob with quality
       return new Promise((resolve) => {
         canvas.toBlob(
@@ -128,10 +143,10 @@ export const useCamera = (options = {}) => {
               width: canvas.width,
               height: canvas.height
             }
-            
+
             setCapturedImages(prev => [...prev, imageData])
             toast.success('Photo captured!')
-            
+
             resolve(imageData)
           },
           'image/jpeg',
@@ -150,49 +165,49 @@ export const useCamera = (options = {}) => {
     if (!isActive) {
       await startCamera()
     }
-    
+
     if (isRecording) return
-    
+
     try {
       const stream = streamRef.current
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp9'
       })
-      
+
       const chunks = []
-      
+
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunks.push(event.data)
         }
       }
-      
+
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'video/webm' })
         const videoUrl = URL.createObjectURL(blob)
-        
+
         const videoData = {
           blob,
           url: videoUrl,
           timestamp: Date.now(),
           duration: recordingTime
         }
-        
+
         setCapturedImages(prev => [...prev, videoData])
         toast.success('Recording saved!')
       }
-      
+
       mediaRecorder.start(1000) // Collect data every second
-      
+
       // Start recording timer
       let seconds = 0
       recordingInterval.current = setInterval(() => {
         seconds++
         setRecordingTime(seconds)
       }, 1000)
-      
+
       setIsRecording(true)
-      
+
       return mediaRecorder
     } catch (err) {
       setError(err.message)
@@ -204,15 +219,15 @@ export const useCamera = (options = {}) => {
   // Stop recording
   const stopRecording = useCallback((mediaRecorder) => {
     if (!isRecording || !mediaRecorder) return
-    
+
     mediaRecorder.stop()
     setIsRecording(false)
-    
+
     if (recordingInterval.current) {
       clearInterval(recordingInterval.current)
       recordingInterval.current = null
     }
-    
+
     setRecordingTime(0)
   }, [isRecording])
 
@@ -221,14 +236,14 @@ export const useCamera = (options = {}) => {
     try {
       // This would typically call your AI service
       // For now, we'll simulate detection
-      
+
       // Create form data
       const formData = new FormData()
       formData.append('image', imageData.blob)
-      
+
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       // Mock face detection results
       const mockFaces = [
         {
@@ -250,7 +265,7 @@ export const useCamera = (options = {}) => {
           studentId: 'STU002'
         }
       ]
-      
+
       setFaces(mockFaces)
       return mockFaces
     } catch (err) {
@@ -263,15 +278,15 @@ export const useCamera = (options = {}) => {
   // Process video frames for face detection
   const processVideoFrame = useCallback(async () => {
     if (!isActive || !videoRef.current) return []
-    
+
     const video = videoRef.current
     const canvas = document.createElement('canvas')
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
-    
+
     const context = canvas.getContext('2d')
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
-    
+
     return new Promise((resolve) => {
       canvas.toBlob(async (blob) => {
         const faces = await detectFaces({ blob })
@@ -283,9 +298,9 @@ export const useCamera = (options = {}) => {
   // Switch camera
   const switchCamera = useCallback(async () => {
     stopCamera()
-    
+
     const newFacingMode = facingMode === 'user' ? 'environment' : 'user'
-    
+
     const constraints = {
       video: {
         facingMode: newFacingMode,
@@ -293,7 +308,7 @@ export const useCamera = (options = {}) => {
         height: { ideal: maxHeight }
       }
     }
-    
+
     return requestPermission(constraints)
   }, [facingMode, stopCamera, maxWidth, maxHeight, requestPermission])
 
@@ -321,7 +336,7 @@ export const useCamera = (options = {}) => {
   // Set specific camera device
   const setCameraDevice = useCallback(async (deviceId) => {
     stopCamera()
-    
+
     const constraints = {
       video: {
         deviceId: { exact: deviceId },
@@ -329,7 +344,7 @@ export const useCamera = (options = {}) => {
         height: { ideal: maxHeight }
       }
     }
-    
+
     return requestPermission(constraints)
   }, [stopCamera, maxWidth, maxHeight, requestPermission])
 
@@ -344,7 +359,7 @@ export const useCamera = (options = {}) => {
     videoRef,
     canvasRef,
     streamRef,
-    
+
     // State
     isActive,
     isRecording,
@@ -353,7 +368,7 @@ export const useCamera = (options = {}) => {
     faces,
     capturedImages,
     recordingTime,
-    
+
     // Methods
     startCamera,
     stopCamera,
