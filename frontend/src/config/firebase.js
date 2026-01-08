@@ -1,17 +1,18 @@
 // Firebase Configuration for Smart Attendance System
-// Replace these values with your Firebase project config
+// These are the actual Firebase project keys
 
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
-// TODO: Replace with your Firebase config from Firebase Console
+// Firebase configuration from Firebase Console
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "YOUR_API_KEY",
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "YOUR_AUTH_DOMAIN",
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "YOUR_PROJECT_ID",
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "YOUR_STORAGE_BUCKET",
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "YOUR_MESSAGING_SENDER_ID",
-    appId: import.meta.env.VITE_FIREBASE_APP_ID || "YOUR_APP_ID"
+    apiKey: "AIzaSyAcW7h3xkr-UXqAnhCfuOGROjZiLj3537U",
+    authDomain: "smart-attendance-system-68e4d.firebaseapp.com",
+    projectId: "smart-attendance-system-68e4d",
+    storageBucket: "smart-attendance-system-68e4d.firebasestorage.app",
+    messagingSenderId: "320520197852",
+    appId: "1:320520197852:web:6786f3775cd78cd5e94619",
+    measurementId: "G-T8T0TGZ522"
 };
 
 // VAPID Key for Push Notifications
