@@ -20,6 +20,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import BackButton from '../components/common/BackButton';
+import Modal from '../components/common/Modal';
 import { ShimmerStudentsPage } from '../components/common/Shimmer';
 import { apiMethods } from '../utils/api';
 import toast from 'react-hot-toast';
@@ -37,6 +38,17 @@ const StudentsPage = () => {
     classes: 0,
     faceRegistered: 0
   });
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    firstName: '',
+    lastName: '',
+    rollNumber: '',
+    parentPhone: '',
+    gender: ''
+  });
+  const [isSaving, setIsSaving] = useState(false);
 
   // Fetch students and classes on mount
   useEffect(() => {
@@ -101,6 +113,48 @@ const StudentsPage = () => {
       }
     } catch (error) {
       toast.error('Failed to delete student', { id: 'student-delete' });
+    }
+  };
+
+  // View student details
+  const handleView = (student) => {
+    setSelectedStudent(student);
+    setShowViewModal(true);
+  };
+
+  // Open edit modal
+  const handleEdit = (student) => {
+    setSelectedStudent(student);
+    setEditForm({
+      firstName: student.firstName || '',
+      lastName: student.lastName || '',
+      rollNumber: student.rollNumber || '',
+      parentPhone: student.parentPhone || '',
+      gender: student.gender || ''
+    });
+    setShowEditModal(true);
+  };
+
+  // Save edited student
+  const handleSaveEdit = async () => {
+    if (!editForm.firstName.trim()) {
+      toast.error('First name is required', { id: 'student-edit' });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await apiMethods.updateStudent(selectedStudent._id, editForm);
+      if (response.success) {
+        toast.success('Student updated successfully!', { id: 'student-edit' });
+        setShowEditModal(false);
+        setSelectedStudent(null);
+        fetchData(); // Refresh list
+      }
+    } catch (error) {
+      toast.error('Failed to update student', { id: 'student-edit' });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -305,14 +359,14 @@ const StudentsPage = () => {
                           <button
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                             title="View Details"
-                            onClick={() => toast.success(`Viewing details for ${student.firstName}`, { id: 'student-action' })}
+                            onClick={() => handleView(student)}
                           >
                             <Eye size={18} />
                           </button>
                           <button
                             className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
                             title="Edit"
-                            onClick={() => toast.success(`Editing ${student.firstName}`, { id: 'student-action' })}
+                            onClick={() => handleEdit(student)}
                           >
                             <Edit size={18} />
                           </button>
@@ -361,6 +415,140 @@ const StudentsPage = () => {
           </div>
         </>
       )}
+
+      {/* View Student Modal */}
+      <Modal
+        isOpen={showViewModal}
+        onClose={() => { setShowViewModal(false); setSelectedStudent(null); }}
+        title="Student Details"
+        size="md"
+      >
+        {selectedStudent && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-2xl font-bold">
+                {selectedStudent.firstName?.charAt(0)}{selectedStudent.lastName?.charAt(0)}
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">{selectedStudent.firstName} {selectedStudent.lastName}</h3>
+                <p className="text-gray-500">Roll No: {selectedStudent.rollNumber}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-sm text-gray-500">Class</p>
+                <p className="font-medium">{selectedStudent.class?.name || selectedStudent.class?.grade || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-sm text-gray-500">Section</p>
+                <p className="font-medium">{selectedStudent.class?.section || selectedStudent.section || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-sm text-gray-500">Gender</p>
+                <p className="font-medium capitalize">{selectedStudent.gender || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-sm text-gray-500">Parent Phone</p>
+                <p className="font-medium">{selectedStudent.parentPhone || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg col-span-2">
+                <p className="text-sm text-gray-500">Face Recognition</p>
+                <p className={`font-medium ${selectedStudent.faceRegistered ? 'text-green-600' : 'text-yellow-600'}`}>
+                  {selectedStudent.faceRegistered ? '✅ Registered' : '⏳ Pending'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button variant="outline" fullWidth onClick={() => setShowViewModal(false)}>
+                Close
+              </Button>
+              <Button variant="primary" fullWidth onClick={() => { setShowViewModal(false); handleEdit(selectedStudent); }}>
+                Edit Student
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Edit Student Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => { setShowEditModal(false); setSelectedStudent(null); }}
+        title="Edit Student"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+              <input
+                type="text"
+                value={editForm.firstName}
+                onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="First Name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+              <input
+                type="text"
+                value={editForm.lastName}
+                onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Last Name"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Roll Number</label>
+            <input
+              type="text"
+              value={editForm.rollNumber}
+              onChange={(e) => setEditForm({ ...editForm, rollNumber: e.target.value })}
+              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Roll Number"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Parent Phone</label>
+            <input
+              type="tel"
+              value={editForm.parentPhone}
+              onChange={(e) => setEditForm({ ...editForm, parentPhone: e.target.value })}
+              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Parent Phone Number"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+            <select
+              value={editForm.gender}
+              onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <Button variant="outline" fullWidth onClick={() => setShowEditModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" fullWidth onClick={handleSaveEdit} loading={isSaving}>
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

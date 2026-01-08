@@ -305,7 +305,7 @@ const TeacherManagementPage = () => {
                     )}
                     <div className="flex items-center">
                       <BookOpen size={14} className="mr-2" />
-                      {classes.filter(c => c.teacher?._id === teacher._id || c.teacher === teacher._id).length} Classes Assigned
+                      {(teacher.assignedClasses?.length || 0) || classes.filter(c => c.teacher?._id === teacher._id || c.teacher === teacher._id).length} Classes Assigned
                     </div>
                   </div>
 
