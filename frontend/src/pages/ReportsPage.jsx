@@ -59,6 +59,106 @@ const ReportsPage = () => {
     }
   };
 
+  // Export attendance data as CSV
+  const exportToCSV = (data, filename) => {
+    if (!data || data.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+
+    // Create CSV headers
+    const headers = ['Date', 'Student Name', 'Roll Number', 'Class', 'Status', 'Time'];
+
+    // Create CSV rows
+    const rows = data.map(record => [
+      record.date || new Date().toLocaleDateString(),
+      record.student?.firstName ? `${record.student.firstName} ${record.student.lastName || ''}` : 'N/A',
+      record.student?.rollNumber || 'N/A',
+      record.class?.name || record.class?.grade || 'N/A',
+      record.status || 'N/A',
+      record.time || record.createdAt ? new Date(record.createdAt).toLocaleTimeString() : 'N/A'
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success(`✅ Report exported: ${filename}.csv`);
+  };
+
+  // Generate and download report
+  const handleGenerateReport = async () => {
+    toast.loading('Generating report...');
+    try {
+      const response = await apiMethods.getDailyAttendance({
+        startDate: dateRange.start,
+        endDate: dateRange.end
+      });
+
+      toast.dismiss();
+
+      if (response.success && response.data) {
+        const data = Array.isArray(response.data) ? response.data : [];
+        if (data.length === 0) {
+          toast.error('No attendance records found for selected date range');
+          return;
+        }
+        exportToCSV(data, `attendance_report_${dateRange.start}_to_${dateRange.end}`);
+      } else {
+        toast.error('Failed to fetch attendance data');
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error('Error generating report:', error);
+      toast.error('Failed to generate report');
+    }
+  };
+
+  // Export all reports
+  const handleExportAllReports = async () => {
+    toast.loading('Exporting all attendance records...');
+    try {
+      // Fetch all attendance data (last 30 days)
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const response = await apiMethods.getDailyAttendance({
+        startDate,
+        endDate
+      });
+
+      toast.dismiss();
+
+      if (response.success && response.data) {
+        const data = Array.isArray(response.data) ? response.data : [];
+        if (data.length === 0) {
+          toast.error('No attendance records found');
+          return;
+        }
+        exportToCSV(data, 'all_attendance_reports');
+      } else {
+        toast.error('Failed to fetch attendance data');
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error('Error exporting reports:', error);
+      toast.error('Failed to export reports');
+    }
+  };
+
   // Report templates
   const reportTemplates = [
     { name: 'Daily Attendance', description: 'Attendance report for a specific day', icon: Calendar },
@@ -86,7 +186,7 @@ const ReportsPage = () => {
               <p className="text-gray-600 mt-2">Generate and analyze attendance reports</p>
             </div>
           </div>
-          <Button variant="primary" icon={Download} onClick={() => toast.success('Exporting all reports...')}>
+          <Button variant="primary" icon={Download} onClick={handleExportAllReports}>
             Export All Reports
           </Button>
         </div>
@@ -162,7 +262,7 @@ const ReportsPage = () => {
             <Button variant="outline" icon={Filter} onClick={() => toast.success('Filters applied')}>
               Apply Filters
             </Button>
-            <Button variant="primary" icon={Download} onClick={() => toast.success('Generating report...')}>
+            <Button variant="primary" icon={Download} onClick={handleGenerateReport}>
               Generate Report
             </Button>
           </div>

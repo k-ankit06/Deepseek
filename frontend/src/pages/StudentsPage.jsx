@@ -103,6 +103,48 @@ const StudentsPage = () => {
     }
   };
 
+  // Export students list to CSV
+  const handleExportStudents = () => {
+    if (filteredStudents.length === 0) {
+      toast.error('No students to export');
+      return;
+    }
+
+    // Create CSV headers
+    const headers = ['Roll Number', 'First Name', 'Last Name', 'Class', 'Section', 'Gender', 'Parent Phone', 'Face Registered'];
+
+    // Create CSV rows
+    const rows = filteredStudents.map(student => [
+      student.rollNumber || 'N/A',
+      student.firstName || 'N/A',
+      student.lastName || '',
+      student.class?.grade || student.class?.name || 'N/A',
+      student.class?.section || student.section || 'N/A',
+      student.gender || 'N/A',
+      student.parentPhone || 'N/A',
+      student.faceRegistered ? 'Yes' : 'No'
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `students_list_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success(`✅ Exported ${filteredStudents.length} students to CSV`);
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4">
       {/* Header */}
@@ -188,7 +230,7 @@ const StudentsPage = () => {
                 </option>
               ))}
             </select>
-            <Button variant="outline" icon={Download} onClick={() => toast.success('Exporting student list...')}>
+            <Button variant="outline" icon={Download} onClick={handleExportStudents}>
               Export
             </Button>
           </div>
