@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import BackButton from '../components/common/BackButton';
 import ToggleSwitch from '../components/common/ToggleSwitch';
 import Input from '../components/common/Input';
 import toast from 'react-hot-toast';
@@ -97,13 +98,16 @@ const SettingsPage = () => {
         className="mb-8"
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mr-4">
-              <Settings className="text-white" size={24} />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800">System Settings</h1>
-              <p className="text-gray-600">Configure application preferences and behavior</p>
+          <div className="flex items-center gap-4">
+            <BackButton />
+            <div className="flex items-center">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mr-4">
+                <Settings className="text-white" size={24} />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800">System Settings</h1>
+                <p className="text-gray-600">Configure application preferences and behavior</p>
+              </div>
             </div>
           </div>
           <div className="flex gap-3">

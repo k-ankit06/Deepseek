@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import BackButton from '../components/common/BackButton';
 import { DailyAttendance, MonthlySummary, ReportExporter, StudentHistory } from '../components/reports';
 import { apiMethods } from '../utils/api';
 import toast from 'react-hot-toast';
@@ -75,12 +76,15 @@ const ReportsPage = () => {
         className="mb-8"
       >
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-              <BarChart3 className="mr-3" size={32} />
-              Reports & Analytics
-            </h1>
-            <p className="text-gray-600 mt-2">Generate and analyze attendance reports</p>
+          <div className="flex items-center gap-4">
+            <BackButton />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 flex items-center">
+                <BarChart3 className="mr-3" size={32} />
+                Reports & Analytics
+              </h1>
+              <p className="text-gray-600 mt-2">Generate and analyze attendance reports</p>
+            </div>
           </div>
           <Button variant="primary" icon={Download} onClick={() => toast.success('Exporting all reports...')}>
             Export All Reports

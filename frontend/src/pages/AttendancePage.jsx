@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import BackButton from '../components/common/BackButton';
 import { AttendanceCapture, AttendanceVerification } from '../components/teacher';
 import { apiMethods } from '../utils/api';
 import toast from 'react-hot-toast';
@@ -86,12 +87,15 @@ const AttendancePage = () => {
         className="mb-8"
       >
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-              <Calendar className="mr-3" size={32} />
-              Attendance Management
-            </h1>
-            <p className="text-gray-600 mt-2">Capture, verify, and manage student attendance</p>
+          <div className="flex items-center gap-4">
+            <BackButton />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 flex items-center">
+                <Calendar className="mr-3" size={32} />
+                Attendance Management
+              </h1>
+              <p className="text-gray-600 mt-2">Capture, verify, and manage student attendance</p>
+            </div>
           </div>
           <div className="flex gap-3">
             <Button variant="outline" icon={Download} onClick={() => toast.success('Exporting attendance data...')}>

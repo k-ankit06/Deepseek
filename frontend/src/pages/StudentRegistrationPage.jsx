@@ -18,6 +18,7 @@ import {
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
+import BackButton from '../components/common/BackButton';
 import CameraCapture from '../components/common/CameraCapture';
 import { apiMethods } from '../utils/api';
 import toast from 'react-hot-toast';
@@ -270,12 +271,15 @@ const StudentRegistrationPage = () => {
         className="mb-8"
       >
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-              <UserPlus className="mr-3" size={32} />
-              Student Registration
-            </h1>
-            <p className="text-gray-600 mt-2">Register new students with face capture for attendance</p>
+          <div className="flex items-center gap-4">
+            <BackButton to="/students" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 flex items-center">
+                <UserPlus className="mr-3" size={32} />
+                Student Registration
+              </h1>
+              <p className="text-gray-600 mt-2">Register new students with face capture for attendance</p>
+            </div>
           </div>
           <Button
             variant="primary"

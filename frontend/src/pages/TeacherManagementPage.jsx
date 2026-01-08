@@ -17,6 +17,7 @@ import {
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
+import BackButton from '../components/common/BackButton';
 import { apiMethods } from '../utils/api';
 import toast from 'react-hot-toast';
 
@@ -183,12 +184,15 @@ const TeacherManagementPage = () => {
         className="mb-8"
       >
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-              <Users className="mr-3" size={32} />
-              Teacher Management
-            </h1>
-            <p className="text-gray-600 mt-2">Manage teacher accounts and class assignments</p>
+          <div className="flex items-center gap-4">
+            <BackButton to="/admin" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 flex items-center">
+                <Users className="mr-3" size={32} />
+                Teacher Management
+              </h1>
+              <p className="text-gray-600 mt-2">Manage teacher accounts and class assignments</p>
+            </div>
           </div>
           <div className="flex gap-3">
             <Button
