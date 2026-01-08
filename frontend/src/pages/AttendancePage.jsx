@@ -101,9 +101,6 @@ const AttendancePage = () => {
             <Button variant="outline" icon={Download} onClick={() => toast.success('Exporting attendance data...')}>
               Export
             </Button>
-            <Button variant="primary" icon={Camera} onClick={() => setActiveTab('capture')}>
-              Take Attendance
-            </Button>
           </div>
         </div>
       </motion.div>
@@ -291,9 +288,19 @@ const AttendancePage = () => {
           <div className="flex-1">
             <h4 className="font-medium mb-2">⚡ Quick Actions:</h4>
             <div className="flex gap-2 flex-wrap">
-              <Button size="sm" variant="outline" onClick={() => toast.success('Opening daily report...')}>View Daily Report</Button>
-              <Button size="sm" variant="outline" onClick={() => toast.success('Printing attendance...')}>Print Attendance</Button>
-              <Button size="sm" variant="outline" onClick={() => toast.success('Message sent to parents')}>Message Parents</Button>
+              <Button size="sm" variant="outline" onClick={() => {
+                // Navigate to reports page with daily tab
+                window.location.href = '/reports';
+              }}>View Daily Report</Button>
+              <Button size="sm" variant="outline" onClick={() => {
+                // Print current page
+                window.print();
+                toast.success('Printing attendance...');
+              }}>Print Attendance</Button>
+              <Button size="sm" variant="outline" disabled className="opacity-60 cursor-not-allowed">
+                Message Parents
+                <span className="ml-1 text-xs bg-yellow-200 text-yellow-800 px-1 rounded">Coming Soon</span>
+              </Button>
             </div>
           </div>
         </div>
