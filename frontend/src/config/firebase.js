@@ -15,8 +15,8 @@ const firebaseConfig = {
     measurementId: "G-T8T0TGZ522"
 };
 
-// VAPID Key for Push Notifications
-const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "YOUR_VAPID_KEY";
+// VAPID Key for Push Notifications (from Firebase Cloud Messaging)
+const VAPID_KEY = "BDpC0oOxl6Lgez-Gd9TNo3n4SNZTv2zPeUsQWuueNzUidzk_XycMhO0Hv61Duds6cr10782wjh9R4IjTzOm48pg";
 
 // Initialize Firebase
 let app;
