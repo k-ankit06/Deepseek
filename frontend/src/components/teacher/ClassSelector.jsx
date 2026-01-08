@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import Button from '../common/Button'
 import Card from '../common/Card'
+import { ShimmerGrid } from '../common/Shimmer'
 import { apiMethods } from '../../utils/api'
 import { useNavigate } from 'react-router-dom'
 
@@ -73,10 +74,7 @@ const ClassSelector = ({ onSelectClass, showActions = true }) => {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-8">
-          <Loader2 className="animate-spin mx-auto text-blue-500 mb-4" size={40} />
-          <p className="text-gray-600">Loading classes...</p>
-        </div>
+        <ShimmerGrid count={6} columns={3} />
       ) : classes.length > 0 ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {classes.map((cls) => (
@@ -86,8 +84,8 @@ const ClassSelector = ({ onSelectClass, showActions = true }) => {
               whileTap={{ scale: 0.98 }}
               onClick={() => handleSelectClass(cls)}
               className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedClass?._id === cls._id
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                 }`}
             >
               <div className="flex items-start justify-between mb-3">

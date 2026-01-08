@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import { ShimmerDashboard } from '../components/common/Shimmer';
 import { useAuth } from '../context/AuthContext';
 import { apiMethods } from '../utils/api';
 import toast from 'react-hot-toast';
@@ -132,12 +133,9 @@ const TeacherDashboard = () => {
         </div>
       </motion.div>
 
-      {/* Loading State */}
+      {/* Loading State - Shimmer Effect */}
       {isLoading ? (
-        <Card className="p-12 text-center">
-          <Loader2 className="animate-spin mx-auto text-blue-500 mb-4" size={48} />
-          <p className="text-gray-600">Loading dashboard...</p>
-        </Card>
+        <ShimmerDashboard />
       ) : (
         <>
           {/* Stats Grid */}
@@ -223,7 +221,7 @@ const TeacherDashboard = () => {
                     My Classes
                   </h2>
                 </div>
-  
+
                 {classes.length > 0 ? (
                   <div className="space-y-3">
                     {classes.slice(0, 5).map((cls, index) => (

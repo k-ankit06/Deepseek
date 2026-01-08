@@ -18,6 +18,7 @@ import {
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
+import { ShimmerDashboard } from '../components/common/Shimmer';
 import { apiMethods } from '../utils/api';
 import toast from 'react-hot-toast';
 
@@ -222,10 +223,7 @@ const SchoolSetupPage = () => {
   if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto p-4">
-        <Card className="p-12 text-center">
-          <Loader2 className="animate-spin mx-auto text-blue-500 mb-4" size={48} />
-          <p className="text-gray-600">Loading school information...</p>
-        </Card>
+        <ShimmerDashboard />
       </div>
     );
   }

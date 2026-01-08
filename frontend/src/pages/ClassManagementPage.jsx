@@ -17,6 +17,7 @@ import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Modal from '../components/common/Modal';
 import BackButton from '../components/common/BackButton';
+import { ShimmerClassesPage } from '../components/common/Shimmer';
 import { apiMethods } from '../utils/api';
 import toast from 'react-hot-toast';
 
@@ -192,12 +193,9 @@ const ClassManagementPage = () => {
         </div>
       </Card>
 
-      {/* Loading State */}
+      {/* Loading State - Shimmer Effect */}
       {isLoading ? (
-        <Card className="p-12 text-center">
-          <Loader2 className="animate-spin mx-auto text-blue-500 mb-4" size={48} />
-          <p className="text-gray-600">Loading classes...</p>
-        </Card>
+        <ShimmerClassesPage />
       ) : (
         <>
           {/* Classes Grid */}

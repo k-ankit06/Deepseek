@@ -28,6 +28,7 @@ import {
   cacheStudentsOffline,
   getCachedStudents
 } from '../../utils/offlineStorage'
+import { ShimmerAttendancePage } from '../common/Shimmer'
 import toast from 'react-hot-toast'
 
 const AttendanceCapture = () => {
@@ -515,10 +516,7 @@ const AttendanceCapture = () => {
             </div>
 
             {isLoading ? (
-              <div className="text-center py-8">
-                <Loader2 className="animate-spin mx-auto text-blue-500 mb-4" size={48} />
-                <p className="text-gray-600">Loading classes...</p>
-              </div>
+              <ShimmerAttendancePage />
             ) : (
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
