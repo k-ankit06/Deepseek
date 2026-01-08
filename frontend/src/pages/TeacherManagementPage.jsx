@@ -35,8 +35,14 @@ const TeacherManagementPage = () => {
     email: '',
     password: '',
     phone: '',
+    subjects: [],
     assignedClasses: [],
+    qualification: '',
+    specialization: '',
   });
+
+  // Subject input for tag-like entry
+  const [subjectInput, setSubjectInput] = useState('');
 
   // Fetch data on mount
   useEffect(() => {
@@ -96,19 +102,24 @@ const TeacherManagementPage = () => {
 
     setIsSaving(true);
     try {
+      const emptyTeacher = { name: '', email: '', password: '', phone: '', subjects: [], assignedClasses: [], qualification: '', specialization: '' };
+
       if (editingTeacher) {
         // Update existing teacher
         const updateData = {
           name: newTeacher.name,
           phone: newTeacher.phone,
+          subjects: newTeacher.subjects,
           assignedClasses: newTeacher.assignedClasses,
+          qualification: newTeacher.qualification,
+          specialization: newTeacher.specialization,
         };
         const response = await apiMethods.updateUser(editingTeacher._id, updateData);
         if (response.success) {
           toast.success('Teacher updated successfully!');
           setShowAddModal(false);
           setEditingTeacher(null);
-          setNewTeacher({ name: '', email: '', password: '', phone: '', assignedClasses: [] });
+          setNewTeacher(emptyTeacher);
           fetchData();
         }
       } else {
@@ -119,13 +130,16 @@ const TeacherManagementPage = () => {
           password: newTeacher.password,
           role: 'teacher',
           phone: newTeacher.phone,
+          subjects: newTeacher.subjects,
           assignedClasses: newTeacher.assignedClasses,
+          qualification: newTeacher.qualification,
+          specialization: newTeacher.specialization,
         };
         const response = await apiMethods.createUser(teacherData);
         if (response.success) {
           toast.success('Teacher added successfully!');
           setShowAddModal(false);
-          setNewTeacher({ name: '', email: '', password: '', phone: '', assignedClasses: [] });
+          setNewTeacher(emptyTeacher);
           fetchData();
         }
       }
@@ -250,7 +264,10 @@ const TeacherManagementPage = () => {
                             email: teacher.email,
                             password: '',
                             phone: teacher.phone || '',
-                            assignedClasses: []
+                            subjects: teacher.subjects || [],
+                            assignedClasses: teacher.assignedClasses || [],
+                            qualification: teacher.qualification || '',
+                            specialization: teacher.specialization || '',
                           });
                           setShowAddModal(true);
                         }}
@@ -284,7 +301,18 @@ const TeacherManagementPage = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t">
+                  {/* Subjects Tags */}
+                  {teacher.subjects && teacher.subjects.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {teacher.subjects.map((subject, idx) => (
+                        <span key={idx} className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">
+                          {subject}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-4 pt-4 border-t flex items-center justify-between">
                     <span className={`px-3 py-1 rounded-full text-xs ${teacher.isActive !== false
                       ? 'bg-green-100 text-green-800'
                       : 'bg-gray-100 text-gray-800'
@@ -392,6 +420,74 @@ const TeacherManagementPage = () => {
                   value={newTeacher.phone}
                   onChange={(e) => setNewTeacher({ ...newTeacher, phone: e.target.value })}
                   placeholder="Enter phone number"
+                />
+              </div>
+
+              {/* Subjects - Tag Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Subjects (Press Enter to add)
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {newTeacher.subjects.map((subject, index) => (
+                    <span
+                      key={index}
+                      className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-1"
+                    >
+                      {subject}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = newTeacher.subjects.filter((_, i) => i !== index);
+                          setNewTeacher({ ...newTeacher, subjects: updated });
+                        }}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <Input
+                  value={subjectInput}
+                  onChange={(e) => setSubjectInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && subjectInput.trim()) {
+                      e.preventDefault();
+                      if (!newTeacher.subjects.includes(subjectInput.trim())) {
+                        setNewTeacher({
+                          ...newTeacher,
+                          subjects: [...newTeacher.subjects, subjectInput.trim()]
+                        });
+                      }
+                      setSubjectInput('');
+                    }
+                  }}
+                  placeholder="Type subject and press Enter (e.g. Math, English)"
+                />
+              </div>
+
+              {/* Qualification */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Qualification
+                </label>
+                <Input
+                  value={newTeacher.qualification}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, qualification: e.target.value })}
+                  placeholder="e.g. B.Ed, M.Ed, PhD"
+                />
+              </div>
+
+              {/* Specialization */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Specialization
+                </label>
+                <Input
+                  value={newTeacher.specialization}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, specialization: e.target.value })}
+                  placeholder="e.g. Mathematics, Science, English"
                 />
               </div>
 
