@@ -43,6 +43,18 @@ const SchoolSignupPage = () => {
         }));
     };
 
+    // Handle phone input - only allow digits
+    const handlePhoneChange = (field, value) => {
+        const digitsOnly = value.replace(/\D/g, '');
+        handleChange(field, digitsOnly);
+    };
+
+    // Handle name input - no digits allowed
+    const handleNameChange = (field, value) => {
+        const noDigits = value.replace(/\d/g, '');
+        handleChange(field, noDigits);
+    };
+
     const generateSchoolCode = () => {
         if (formData.schoolName) {
             const nameParts = formData.schoolName.split(' ');
@@ -53,18 +65,78 @@ const SchoolSignupPage = () => {
     };
 
     const validateStep1 = () => {
+        // School name validation
         if (!formData.schoolName.trim()) {
             toast.error('Please enter school name');
             return false;
         }
+        if (formData.schoolName.length < 3) {
+            toast.error('School name must be at least 3 characters');
+            return false;
+        }
+        if (formData.schoolName.length > 100) {
+            toast.error('School name must be less than 100 characters');
+            return false;
+        }
+        if (/\d/.test(formData.schoolName)) {
+            toast.error('School name should not contain numbers');
+            return false;
+        }
+
+        // School code validation
         if (!formData.schoolCode.trim()) {
             toast.error('Please enter or generate school code');
             return false;
         }
+        if (formData.schoolCode.length > 20) {
+            toast.error('School code must be less than 20 characters');
+            return false;
+        }
+
+        // City validation
         if (!formData.city.trim()) {
             toast.error('Please enter city');
             return false;
         }
+        if (formData.city.length > 50) {
+            toast.error('City name must be less than 50 characters');
+            return false;
+        }
+        if (/\d/.test(formData.city)) {
+            toast.error('City name should not contain numbers');
+            return false;
+        }
+
+        // State validation
+        if (formData.state && formData.state.length > 50) {
+            toast.error('State name must be less than 50 characters');
+            return false;
+        }
+        if (formData.state && /\d/.test(formData.state)) {
+            toast.error('State name should not contain numbers');
+            return false;
+        }
+
+        // Phone validation - only numbers allowed
+        if (formData.schoolPhone && !/^\d*$/.test(formData.schoolPhone)) {
+            toast.error('Phone number should contain only digits');
+            return false;
+        }
+        if (formData.schoolPhone && (formData.schoolPhone.length < 10 || formData.schoolPhone.length > 15)) {
+            toast.error('Phone number should be 10-15 digits');
+            return false;
+        }
+
+        // Principal name validation
+        if (formData.principalName && formData.principalName.length > 100) {
+            toast.error('Principal name must be less than 100 characters');
+            return false;
+        }
+        if (formData.principalName && /\d/.test(formData.principalName)) {
+            toast.error('Principal name should not contain numbers');
+            return false;
+        }
+
         return true;
     };
 
@@ -123,12 +195,13 @@ const SchoolSignupPage = () => {
                 localStorage.setItem('token', response.data.token);
                 localStorage.setItem('user', JSON.stringify(response.data.user));
 
-                toast.success('School registered successfully!');
+                toast.success('School registered successfully! Redirecting...');
 
-                // Navigate to admin dashboard
+                // Navigate to admin dashboard using window.location for full page reload
+                // This ensures context is properly loaded
                 setTimeout(() => {
-                    navigate('/admin');
-                }, 1000);
+                    window.location.href = '/admin';
+                }, 500);
             }
         } catch (error) {
             console.error('Registration error:', error);
@@ -196,10 +269,12 @@ const SchoolSignupPage = () => {
                                     <input
                                         type="text"
                                         value={formData.schoolName}
-                                        onChange={(e) => handleChange('schoolName', e.target.value)}
+                                        onChange={(e) => handleNameChange('schoolName', e.target.value)}
+                                        maxLength={100}
                                         className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
-                                        placeholder="e.g., Delhi Public School"
+                                        placeholder="e.g., Delhi Public School (letters only)"
                                     />
+                                    <p className="text-xs text-gray-400 mt-1">{formData.schoolName.length}/100 characters</p>
                                 </div>
                             </div>
 
@@ -232,9 +307,10 @@ const SchoolSignupPage = () => {
                                     <input
                                         type="text"
                                         value={formData.principalName}
-                                        onChange={(e) => handleChange('principalName', e.target.value)}
+                                        onChange={(e) => handleNameChange('principalName', e.target.value)}
+                                        maxLength={100}
                                         className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
-                                        placeholder="Principal name"
+                                        placeholder="Principal name (letters only)"
                                     />
                                 </div>
                             </div>
@@ -249,9 +325,10 @@ const SchoolSignupPage = () => {
                                         <input
                                             type="text"
                                             value={formData.city}
-                                            onChange={(e) => handleChange('city', e.target.value)}
+                                            onChange={(e) => handleNameChange('city', e.target.value)}
+                                            maxLength={50}
                                             className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
-                                            placeholder="City"
+                                            placeholder="City (letters only)"
                                         />
                                     </div>
                                 </div>
@@ -262,9 +339,10 @@ const SchoolSignupPage = () => {
                                     <input
                                         type="text"
                                         value={formData.state}
-                                        onChange={(e) => handleChange('state', e.target.value)}
+                                        onChange={(e) => handleNameChange('state', e.target.value)}
+                                        maxLength={50}
                                         className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
-                                        placeholder="State"
+                                        placeholder="State (letters only)"
                                     />
                                 </div>
                             </div>
@@ -278,12 +356,13 @@ const SchoolSignupPage = () => {
                                     <input
                                         type="tel"
                                         value={formData.schoolPhone}
-                                        onChange={(e) => handleChange('schoolPhone', e.target.value)}
+                                        onChange={(e) => handlePhoneChange('schoolPhone', e.target.value)}
+                                        maxLength={15}
                                         className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
-                                        placeholder="Phone number"
+                                        placeholder="Phone number (digits only)"
                                     />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">School email will be your admin email</p>
+                                <p className="text-xs text-gray-500 mt-1">10-15 digits only. School email will be your admin email.</p>
                             </div>
 
                             <button

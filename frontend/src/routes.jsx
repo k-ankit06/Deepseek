@@ -80,7 +80,7 @@ const routes = [
   },
   {
     path: '/student-registration',
-    component: () => <ProtectedRoute role="admin"><StudentRegistrationPage /></ProtectedRoute>,
+    component: () => <ProtectedRoute><StudentRegistrationPage /></ProtectedRoute>,
     protected: true
   },
   {
