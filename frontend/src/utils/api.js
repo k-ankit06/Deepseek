@@ -34,9 +34,9 @@ api.interceptors.request.use(
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
-    // Handle success messages from server
+    // Handle success messages from server - use ID to prevent duplicates
     if (response.data?.message) {
-      toast.success(response.data.message)
+      toast.success(response.data.message, { id: 'api-success' })
     }
     return response.data
   },
@@ -50,40 +50,35 @@ api.interceptors.response.use(
 
     const { status, data } = error.response
 
-    // Handle specific error cases
+    // Handle specific error cases - use IDs to prevent duplicates
     switch (status) {
       case 401:
         // Don't auto-logout in demo mode - just log the error
         console.warn('401 Unauthorized - Demo mode, not logging out');
-        // toast.error(TOAST_MESSAGES.ERROR_UNAUTHORIZED)
-        // localStorage.removeItem(STORAGE_KEYS.TOKEN)
-        // localStorage.removeItem(STORAGE_KEYS.USER)
-        // window.location.href = '/login'
         break
 
       case 403:
-        toast.error('You do not have permission to perform this action')
+        toast.error('You do not have permission to perform this action', { id: 'api-403' })
         break
 
       case 404:
-        toast.error('Resource not found')
+        toast.error('Resource not found', { id: 'api-404' })
         break
 
       case 422:
-        // Validation errors
+        // Validation errors - show first error only
         if (data.errors) {
-          Object.values(data.errors).forEach(err => {
-            toast.error(err[0])
-          })
+          const firstError = Object.values(data.errors)[0];
+          toast.error(firstError[0], { id: 'api-validation' })
         }
         break
 
       case 500:
-        toast.error(TOAST_MESSAGES.ERROR_GENERIC)
+        toast.error(TOAST_MESSAGES.ERROR_GENERIC, { id: 'api-500' })
         break
 
       default:
-        toast.error(data?.message || TOAST_MESSAGES.ERROR_GENERIC)
+        toast.error(data?.message || TOAST_MESSAGES.ERROR_GENERIC, { id: 'api-error' })
     }
 
     return Promise.reject(error.response?.data || error)

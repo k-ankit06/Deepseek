@@ -53,7 +53,7 @@ const SettingsPage = () => {
   const handleSave = () => {
     // Save settings to localStorage
     localStorage.setItem('app_settings', JSON.stringify(settings));
-    toast.success('✅ Settings saved successfully!');
+    toast.success('✅ Settings saved successfully!', { id: 'settings-save' });
   };
 
   const handleReset = () => {
@@ -79,7 +79,7 @@ const SettingsPage = () => {
     };
     setSettings(defaultSettings);
     localStorage.removeItem('app_settings');
-    toast.success('🔄 Settings reset to defaults!');
+    toast.success('🔄 Settings reset to defaults!', { id: 'settings-reset' });
   };
 
   const handleChange = (field, value) => {

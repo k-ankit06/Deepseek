@@ -96,18 +96,18 @@ const StudentsPage = () => {
     try {
       const response = await apiMethods.deleteStudent(studentId);
       if (response.success) {
-        toast.success('Student deleted successfully');
+        toast.success('Student deleted successfully', { id: 'student-delete' });
         fetchData(); // Refresh list
       }
     } catch (error) {
-      toast.error('Failed to delete student');
+      toast.error('Failed to delete student', { id: 'student-delete' });
     }
   };
 
   // Export students list to CSV
   const handleExportStudents = () => {
     if (filteredStudents.length === 0) {
-      toast.error('No students to export');
+      toast.error('No students to export', { id: 'student-export' });
       return;
     }
 
@@ -143,7 +143,7 @@ const StudentsPage = () => {
     link.click();
     document.body.removeChild(link);
 
-    toast.success(`✅ Exported ${filteredStudents.length} students to CSV`);
+    toast.success(`✅ Exported ${filteredStudents.length} students to CSV`, { id: 'student-export' });
   };
 
   return (
@@ -305,14 +305,14 @@ const StudentsPage = () => {
                           <button
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                             title="View Details"
-                            onClick={() => toast.success(`Viewing details for ${student.firstName}`)}
+                            onClick={() => toast.success(`Viewing details for ${student.firstName}`, { id: 'student-action' })}
                           >
                             <Eye size={18} />
                           </button>
                           <button
                             className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
                             title="Edit"
-                            onClick={() => toast.success(`Editing ${student.firstName}`)}
+                            onClick={() => toast.success(`Editing ${student.firstName}`, { id: 'student-action' })}
                           >
                             <Edit size={18} />
                           </button>

@@ -90,21 +90,21 @@ const TeacherManagementPage = () => {
   // Add or update teacher
   const handleSaveTeacher = async () => {
     if (!newTeacher.name.trim()) {
-      toast.error('Please enter teacher name');
+      toast.error('Please enter teacher name', { id: 'teacher-validation' });
       return;
     }
     if (!newTeacher.email.trim()) {
-      toast.error('Please enter email');
+      toast.error('Please enter email', { id: 'teacher-validation' });
       return;
     }
     // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newTeacher.email)) {
-      toast.error('Please enter a valid email address (e.g., teacher@school.com)');
+      toast.error('Please enter a valid email address (e.g., teacher@school.com)', { id: 'teacher-validation' });
       return;
     }
     if (!editingTeacher && (!newTeacher.password || newTeacher.password.length < 6)) {
-      toast.error('Password must be at least 6 characters');
+      toast.error('Password must be at least 6 characters', { id: 'teacher-validation' });
       return;
     }
 
@@ -124,7 +124,7 @@ const TeacherManagementPage = () => {
         };
         const response = await apiMethods.updateUser(editingTeacher._id, updateData);
         if (response.success) {
-          toast.success('Teacher updated successfully!');
+          toast.success('Teacher updated successfully!', { id: 'teacher-action' });
           setShowAddModal(false);
           setEditingTeacher(null);
           setNewTeacher(emptyTeacher);
@@ -145,14 +145,14 @@ const TeacherManagementPage = () => {
         };
         const response = await apiMethods.createUser(teacherData);
         if (response.success) {
-          toast.success('Teacher added successfully!');
+          toast.success('Teacher added successfully!', { id: 'teacher-action' });
           setShowAddModal(false);
           setNewTeacher(emptyTeacher);
           fetchData();
         }
       }
     } catch (error) {
-      toast.error(error.message || 'Failed to save teacher');
+      toast.error(error.message || 'Failed to save teacher', { id: 'teacher-action' });
     } finally {
       setIsSaving(false);
     }
@@ -167,12 +167,12 @@ const TeacherManagementPage = () => {
     try {
       const response = await apiMethods.deleteUser(teacherId);
       if (response.success) {
-        toast.success('Teacher deleted successfully');
+        toast.success('Teacher deleted successfully', { id: 'teacher-delete' });
         fetchData();
       }
     } catch (error) {
       console.error('Delete error:', error);
-      toast.error(error.message || error.response?.data?.message || 'Failed to delete teacher');
+      toast.error(error.message || error.response?.data?.message || 'Failed to delete teacher', { id: 'teacher-delete' });
     }
   };
 
