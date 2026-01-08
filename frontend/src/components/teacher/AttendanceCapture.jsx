@@ -20,7 +20,14 @@ import Button from '../common/Button'
 import Card from '../common/Card'
 import CameraCapture from '../common/CameraCapture'
 import { apiMethods } from '../../utils/api'
-import { storeAttendanceOffline, getOfflineData } from '../../utils/offlineStorage'
+import {
+  storeAttendanceOffline,
+  getOfflineData,
+  cacheClassesOffline,
+  getCachedClasses,
+  cacheStudentsOffline,
+  getCachedStudents
+} from '../../utils/offlineStorage'
 import toast from 'react-hot-toast'
 
 const AttendanceCapture = () => {
@@ -84,21 +91,45 @@ const AttendanceCapture = () => {
     }
   }, [])
 
-  // Fetch classes on mount
+  // Fetch classes on mount and when offline mode changes
   useEffect(() => {
     fetchClasses()
-  }, [])
+  }, [isOfflineMode, isOnline])
 
   const fetchClasses = async () => {
     setIsLoading(true)
     try {
+      // If offline, use cached data
+      if (isOfflineMode || !isOnline) {
+        const cachedClasses = getCachedClasses()
+        if (cachedClasses.length > 0) {
+          setClasses(cachedClasses)
+          console.log('[Offline] Loaded', cachedClasses.length, 'classes from cache')
+        } else {
+          toast.error('No cached classes available. Go online first to load data.')
+          setClasses([])
+        }
+        setIsLoading(false)
+        return
+      }
+
+      // Online - fetch from API
       const response = await apiMethods.getClasses()
       if (response.success && response.data) {
         setClasses(response.data)
+        // Cache for offline use
+        cacheClassesOffline(response.data)
       }
     } catch (error) {
       console.error('Failed to fetch classes:', error)
-      setClasses([])
+      // Try to use cached data on error
+      const cachedClasses = getCachedClasses()
+      if (cachedClasses.length > 0) {
+        setClasses(cachedClasses)
+        toast('Using cached classes', { icon: '📴' })
+      } else {
+        setClasses([])
+      }
     } finally {
       setIsLoading(false)
     }
@@ -115,6 +146,25 @@ const AttendanceCapture = () => {
 
   const fetchStudentsByClass = async (classId) => {
     try {
+      // If offline, use cached data
+      if (isOfflineMode || !isOnline) {
+        const cachedStudents = getCachedStudents(classId)
+        if (cachedStudents.length > 0) {
+          const studentList = cachedStudents.map(s => ({
+            ...s,
+            status: 'present',
+            confidence: 0
+          }))
+          setStudents(studentList)
+          console.log('[Offline] Loaded', studentList.length, 'students from cache')
+        } else {
+          toast.error('No cached students for this class. Go online first to load data.')
+          setStudents([])
+        }
+        return
+      }
+
+      // Online - fetch from API
       const response = await apiMethods.getStudentsByClass(classId)
       // Handle different response formats
       let studentData = []
@@ -123,6 +173,11 @@ const AttendanceCapture = () => {
           response.data.students ? response.data.students : []
       } else if (Array.isArray(response)) {
         studentData = response
+      }
+
+      // Cache for offline use
+      if (studentData.length > 0) {
+        cacheStudentsOffline(classId, studentData)
       }
 
       // Initialize all students as present
@@ -134,7 +189,21 @@ const AttendanceCapture = () => {
       setStudents(studentList)
     } catch (error) {
       console.error('Failed to fetch students:', error)
-      // Try fetching all students as fallback
+
+      // Try to use cached data on error
+      const cachedStudents = getCachedStudents(classId)
+      if (cachedStudents.length > 0) {
+        const studentList = cachedStudents.map(s => ({
+          ...s,
+          status: 'present',
+          confidence: 0
+        }))
+        setStudents(studentList)
+        toast('Using cached students', { icon: '📴' })
+        return
+      }
+
+      // If no cache, try fetching all students as fallback
       try {
         const allStudents = await apiMethods.getStudents()
         let studentData = []

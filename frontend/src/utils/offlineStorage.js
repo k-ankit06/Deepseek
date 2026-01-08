@@ -327,6 +327,127 @@ export const getOfflineAttendanceCount = () => {
   return count
 }
 
+// ========== OFFLINE CACHE FOR CLASSES & STUDENTS ==========
+
+// Cache classes for offline use
+export const cacheClassesOffline = (classes) => {
+  try {
+    localStorage.setItem('offline_classes_cache', JSON.stringify({
+      data: classes,
+      timestamp: Date.now()
+    }))
+    console.log('[Offline] Cached', classes.length, 'classes')
+    return true
+  } catch (error) {
+    console.error('Failed to cache classes:', error)
+    return false
+  }
+}
+
+// Get cached classes for offline
+export const getCachedClasses = () => {
+  try {
+    const cached = localStorage.getItem('offline_classes_cache')
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached)
+      // Cache valid for 7 days
+      if (Date.now() - timestamp < 7 * 24 * 60 * 60 * 1000) {
+        console.log('[Offline] Using cached classes:', data.length)
+        return data
+      }
+    }
+    return []
+  } catch (error) {
+    console.error('Failed to get cached classes:', error)
+    return []
+  }
+}
+
+// Cache students for a specific class for offline use
+export const cacheStudentsOffline = (classId, students) => {
+  try {
+    // Get existing cache
+    const cacheKey = 'offline_students_cache'
+    const existingCache = JSON.parse(localStorage.getItem(cacheKey) || '{}')
+
+    // Add/update students for this class
+    existingCache[classId] = {
+      data: students,
+      timestamp: Date.now()
+    }
+
+    localStorage.setItem(cacheKey, JSON.stringify(existingCache))
+    console.log('[Offline] Cached', students.length, 'students for class', classId)
+    return true
+  } catch (error) {
+    console.error('Failed to cache students:', error)
+    return false
+  }
+}
+
+// Get cached students for a class for offline
+export const getCachedStudents = (classId) => {
+  try {
+    const cacheKey = 'offline_students_cache'
+    const cached = localStorage.getItem(cacheKey)
+
+    if (cached) {
+      const allCache = JSON.parse(cached)
+      const classCache = allCache[classId]
+
+      if (classCache) {
+        // Cache valid for 7 days
+        if (Date.now() - classCache.timestamp < 7 * 24 * 60 * 60 * 1000) {
+          console.log('[Offline] Using cached students for class', classId, ':', classCache.data.length)
+          return classCache.data
+        }
+      }
+    }
+    return []
+  } catch (error) {
+    console.error('Failed to get cached students:', error)
+    return []
+  }
+}
+
+// Get all cached students (for all classes)
+export const getAllCachedStudents = () => {
+  try {
+    const cacheKey = 'offline_students_cache'
+    const cached = localStorage.getItem(cacheKey)
+
+    if (cached) {
+      const allCache = JSON.parse(cached)
+      let allStudents = []
+
+      Object.values(allCache).forEach(classCache => {
+        if (classCache.data && Array.isArray(classCache.data)) {
+          allStudents = [...allStudents, ...classCache.data]
+        }
+      })
+
+      return allStudents
+    }
+    return []
+  } catch (error) {
+    console.error('Failed to get all cached students:', error)
+    return []
+  }
+}
+
+// Clear offline cache
+export const clearOfflineCache = () => {
+  try {
+    localStorage.removeItem('offline_classes_cache')
+    localStorage.removeItem('offline_students_cache')
+    console.log('[Offline] Cache cleared')
+    return true
+  } catch (error) {
+    console.error('Failed to clear cache:', error)
+    return false
+  }
+}
+
 // Export all offline storage functions
 export default {
   initOfflineStorage,
@@ -341,5 +462,12 @@ export default {
   cleanupOldData,
   getPendingAttendance,
   syncOfflineAttendance,
-  getOfflineAttendanceCount
+  getOfflineAttendanceCount,
+  // New cache functions
+  cacheClassesOffline,
+  getCachedClasses,
+  cacheStudentsOffline,
+  getCachedStudents,
+  getAllCachedStudents,
+  clearOfflineCache
 }
