@@ -239,6 +239,96 @@ export const ShimmerSettingsPage = () => (
     </div>
 );
 
+// Login Form shimmer
+export const ShimmerLoginForm = () => (
+    <div className="bg-white rounded-2xl p-8 shadow-xl w-full max-w-md mx-auto">
+        {/* Logo */}
+        <div className="text-center mb-8">
+            <ShimmerCircle size="w-16 h-16" className="mx-auto mb-4" />
+            <ShimmerLine width="w-48" height="h-6" className="mx-auto mb-2" />
+            <ShimmerLine width="w-32" height="h-4" className="mx-auto" />
+        </div>
+
+        {/* User Type Selector */}
+        <div className="flex gap-2 mb-6">
+            <ShimmerLine width="w-1/2" height="h-12" className="rounded-xl" />
+            <ShimmerLine width="w-1/2" height="h-12" className="rounded-xl" />
+        </div>
+
+        {/* Form Fields */}
+        <div className="space-y-4">
+            <div>
+                <ShimmerLine width="w-16" height="h-4" className="mb-2" />
+                <ShimmerLine width="w-full" height="h-12" className="rounded-lg" />
+            </div>
+            <div>
+                <ShimmerLine width="w-20" height="h-4" className="mb-2" />
+                <ShimmerLine width="w-full" height="h-12" className="rounded-lg" />
+            </div>
+            <div>
+                <ShimmerLine width="w-24" height="h-4" className="mb-2" />
+                <ShimmerLine width="w-full" height="h-12" className="rounded-lg" />
+            </div>
+        </div>
+
+        {/* Button */}
+        <ShimmerLine width="w-full" height="h-12" className="rounded-lg mt-6" />
+
+        {/* Link */}
+        <ShimmerLine width="w-48" height="h-4" className="mx-auto mt-4" />
+    </div>
+);
+
+// Signup Form shimmer
+export const ShimmerSignupForm = () => (
+    <div className="bg-white rounded-2xl p-8 shadow-xl w-full max-w-lg mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+            <ShimmerCircle size="w-16 h-16" className="mx-auto mb-4" />
+            <ShimmerLine width="w-56" height="h-6" className="mx-auto mb-2" />
+            <ShimmerLine width="w-40" height="h-4" className="mx-auto" />
+        </div>
+
+        {/* Steps */}
+        <div className="flex justify-center gap-4 mb-8">
+            {Array(3).fill(0).map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                    <ShimmerCircle size="w-8 h-8" />
+                    <ShimmerLine width="w-16" height="h-4" />
+                </div>
+            ))}
+        </div>
+
+        {/* Form Fields */}
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <ShimmerLine width="w-24" height="h-4" className="mb-2" />
+                    <ShimmerLine width="w-full" height="h-12" className="rounded-lg" />
+                </div>
+                <div>
+                    <ShimmerLine width="w-20" height="h-4" className="mb-2" />
+                    <ShimmerLine width="w-full" height="h-12" className="rounded-lg" />
+                </div>
+            </div>
+            <div>
+                <ShimmerLine width="w-16" height="h-4" className="mb-2" />
+                <ShimmerLine width="w-full" height="h-12" className="rounded-lg" />
+            </div>
+            <div>
+                <ShimmerLine width="w-20" height="h-4" className="mb-2" />
+                <ShimmerLine width="w-full" height="h-12" className="rounded-lg" />
+            </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-4 mt-6">
+            <ShimmerLine width="w-1/3" height="h-12" className="rounded-lg" />
+            <ShimmerLine width="w-2/3" height="h-12" className="rounded-lg" />
+        </div>
+    </div>
+);
+
 // Default export with all components
 const Shimmer = {
     Line: ShimmerLine,
@@ -254,7 +344,10 @@ const Shimmer = {
     AttendancePage: ShimmerAttendancePage,
     Dashboard: ShimmerDashboard,
     ReportsPage: ShimmerReportsPage,
-    SettingsPage: ShimmerSettingsPage
+    SettingsPage: ShimmerSettingsPage,
+    LoginForm: ShimmerLoginForm,
+    SignupForm: ShimmerSignupForm
 };
 
 export default Shimmer;
+

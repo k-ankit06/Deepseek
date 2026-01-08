@@ -103,16 +103,12 @@ const Button = ({
   const renderIcon = () => {
     if (loading) {
       return (
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className={iconPosition === 'right' ? 'ml-2' : 'mr-2'}
-        >
-          <Loader2 size={size === 'xs' || size === 'sm' ? 14 : 18} />
-        </motion.div>
+        <div className={`flex items-center ${iconPosition === 'right' ? 'ml-2' : 'mr-2'}`}>
+          <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+        </div>
       )
     }
-    
+
     if (icon) {
       const IconComponent = icon
       return (
@@ -121,7 +117,7 @@ const Button = ({
         </span>
       )
     }
-    
+
     return null
   }
 
@@ -221,24 +217,21 @@ export const ButtonGroup = ({ children, className = '', orientation = 'horizonta
       {React.Children.map(children, (child, index) => {
         if (index === 0) {
           return React.cloneElement(child, {
-            className: `${child.props.className || ''} ${
-              orientation === 'horizontal' ? 'rounded-r-none' : 'rounded-b-none'
-            }`
+            className: `${child.props.className || ''} ${orientation === 'horizontal' ? 'rounded-r-none' : 'rounded-b-none'
+              }`
           })
         }
-        
+
         if (index === React.Children.count(children) - 1) {
           return React.cloneElement(child, {
-            className: `${child.props.className || ''} ${
-              orientation === 'horizontal' ? 'rounded-l-none' : 'rounded-t-none'
-            }`
+            className: `${child.props.className || ''} ${orientation === 'horizontal' ? 'rounded-l-none' : 'rounded-t-none'
+              }`
           })
         }
-        
+
         return React.cloneElement(child, {
-          className: `${child.props.className || ''} ${
-            orientation === 'horizontal' ? 'rounded-none' : 'rounded-none'
-          }`
+          className: `${child.props.className || ''} ${orientation === 'horizontal' ? 'rounded-none' : 'rounded-none'
+            }`
         })
       })}
     </div>
