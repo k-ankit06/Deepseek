@@ -513,3 +513,187 @@ select:focus {
     font-size: 0.75rem !important;
   }
 }
+
+/* ========================================
+   TEACHER DASHBOARD MOBILE FIXES
+   ======================================== */
+
+@media screen and (max-width: 768px) {
+
+  /* Dashboard header - Stack vertically */
+  .max-w-7xl .mb-8 .flex.items-center.justify-between {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+
+  /* Teacher header icon + text */
+  .max-w-7xl .mb-8 .flex.items-center.justify-between>.flex.items-center {
+    width: 100%;
+  }
+
+  /* Smaller avatar on mobile */
+  .w-14.h-14 {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .w-14.h-14+div h1 {
+    font-size: 1.25rem !important;
+  }
+
+  /* Button group - Full width */
+  .max-w-7xl .mb-8 .flex.items-center.gap-3 {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .max-w-7xl .mb-8 .flex.items-center.gap-3 button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Stats grid - 2 columns on mobile */
+  .grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Quick actions grid - Single column on mobile */
+  .grid.md\\:grid-cols-2.gap-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Main content grid - Stack on mobile */
+  .grid.lg\\:grid-cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Quick action cards - Smaller padding */
+  .bg-gradient-to-br.rounded-2xl.p-5 {
+    padding: 1rem !important;
+  }
+
+  /* Class items - Tighter spacing */
+  .flex.items-center.p-3.rounded-lg {
+    padding: 0.5rem !important;
+  }
+
+  .flex.items-center.p-3.rounded-lg .w-10.h-10 {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  /* Table - Horizontal scroll */
+  .overflow-x-auto table {
+    min-width: 500px;
+  }
+
+  /* Table cells - Smaller padding */
+  .overflow-x-auto th,
+  .overflow-x-auto td {
+    padding: 0.5rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Hide table on very small screens, show cards instead */
+  .overflow-x-auto {
+    margin: 0 -1rem;
+    padding: 0 1rem;
+  }
+}
+
+/* ========================================
+   ATTENDANCE PAGE MOBILE FIXES
+   ======================================== */
+
+@media screen and (max-width: 768px) {
+
+  /* Camera container - Full width */
+  .aspect-video {
+    width: 100% !important;
+    max-height: 300px;
+  }
+
+  /* Attendance controls - Stack */
+  .flex.items-center.gap-4 {
+    flex-direction: column;
+    gap: 0.75rem !important;
+  }
+
+  /* Class selector - Full width */
+  select {
+    width: 100% !important;
+  }
+
+  /* Attendance buttons - Full width */
+  .flex.gap-2 button {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Student attendance cards */
+  .grid.grid-cols-2.md\\:grid-cols-3.lg\\:grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Student card - Smaller */
+  .w-12.h-12 {
+    width: 40px !important;
+    height: 40px !important;
+  }
+}
+
+/* ========================================
+   REPORTS PAGE MOBILE FIXES  
+   ======================================== */
+
+@media screen and (max-width: 768px) {
+
+  /* Chart container */
+  .recharts-wrapper {
+    font-size: 10px !important;
+  }
+
+  /* Report filters - Stack */
+  .flex.items-center.gap-3 {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  /* Date inputs - Full width */
+  input[type="date"] {
+    width: 100% !important;
+  }
+
+  /* Export buttons - Full width */
+  .flex.gap-2 {
+    flex-direction: column;
+  }
+}
+
+/* ========================================
+   GENERAL MOBILE TYPOGRAPHY
+   ======================================== */
+
+@media screen and (max-width: 768px) {
+
+  /* Truncate long text */
+  .truncate {
+    max-width: 150px;
+  }
+
+  /* Hide decorative elements */
+  .hidden-mobile,
+  .lg\\:block {
+    display: none !important;
+  }
+
+  /* Better touch feedback */
+  button:active,
+  .cursor-pointer:active {
+    opacity: 0.8;
+    transform: scale(0.98);
+  }
+}
