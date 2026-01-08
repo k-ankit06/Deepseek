@@ -85,19 +85,19 @@ const AttendanceVerification = () => {
 
         setAttendanceRecords(records)
         setFilteredRecords(records)
-        toast.success(`Loaded ${records.length} attendance records`)
+        toast.success(`Loaded ${records.length} attendance records`, { id: 'load-attendance' })
       } else {
         // No records found - show empty state
         setAttendanceRecords([])
         setFilteredRecords([])
-        toast('No attendance records found for this date')
+        toast('No attendance records found for this date', { id: 'load-attendance' })
       }
     } catch (error) {
       console.error('Error loading attendance:', error)
       // Show empty state on error
       setAttendanceRecords([])
       setFilteredRecords([])
-      toast.error('Failed to load attendance records')
+      toast.error('Failed to load attendance records', { id: 'load-attendance' })
     } finally {
       setIsLoading(false)
     }

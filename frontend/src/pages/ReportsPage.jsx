@@ -101,35 +101,33 @@ const ReportsPage = () => {
 
   // Generate and download report
   const handleGenerateReport = async () => {
-    toast.loading('Generating report...');
+    toast.loading('Generating report...', { id: 'generate-report' });
     try {
       const response = await apiMethods.getDailyAttendance({
         startDate: dateRange.start,
         endDate: dateRange.end
       });
 
-      toast.dismiss();
-
       if (response.success && response.data) {
         const data = Array.isArray(response.data) ? response.data : [];
         if (data.length === 0) {
-          toast.error('No attendance records found for selected date range');
+          toast.error('No attendance records found for selected date range', { id: 'generate-report' });
           return;
         }
         exportToCSV(data, `attendance_report_${dateRange.start}_to_${dateRange.end}`);
+        toast.success('Report generated!', { id: 'generate-report' });
       } else {
-        toast.error('Failed to fetch attendance data');
+        toast.error('Failed to fetch attendance data', { id: 'generate-report' });
       }
     } catch (error) {
-      toast.dismiss();
       console.error('Error generating report:', error);
-      toast.error('Failed to generate report');
+      toast.error('Failed to generate report', { id: 'generate-report' });
     }
   };
 
   // Export all reports
   const handleExportAllReports = async () => {
-    toast.loading('Exporting all attendance records...');
+    toast.loading('Exporting all attendance records...', { id: 'export-all' });
     try {
       // Fetch all attendance data (last 30 days)
       const endDate = new Date().toISOString().split('T')[0];
@@ -140,22 +138,20 @@ const ReportsPage = () => {
         endDate
       });
 
-      toast.dismiss();
-
       if (response.success && response.data) {
         const data = Array.isArray(response.data) ? response.data : [];
         if (data.length === 0) {
-          toast.error('No attendance records found');
+          toast.error('No attendance records found', { id: 'export-all' });
           return;
         }
         exportToCSV(data, 'all_attendance_reports');
+        toast.success('All records exported!', { id: 'export-all' });
       } else {
-        toast.error('Failed to fetch attendance data');
+        toast.error('Failed to fetch attendance data', { id: 'export-all' });
       }
     } catch (error) {
-      toast.dismiss();
       console.error('Error exporting reports:', error);
-      toast.error('Failed to export reports');
+      toast.error('Failed to export reports', { id: 'export-all' });
     }
   };
 

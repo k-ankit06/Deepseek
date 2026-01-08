@@ -295,7 +295,7 @@ const AttendancePage = () => {
               <Button size="sm" variant="outline" onClick={() => {
                 // Print current page
                 window.print();
-                toast.success('Printing attendance...');
+                toast.success('Printing attendance...', { id: 'print-attendance' });
               }}>Print Attendance</Button>
               <Button size="sm" variant="outline" disabled className="opacity-60 cursor-not-allowed">
                 Message Parents
