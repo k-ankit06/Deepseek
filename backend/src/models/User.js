@@ -60,6 +60,25 @@ const userSchema = new mongoose.Schema({
   lastLogin: {
     type: Date,
   },
+  // FCM Push Notification tokens
+  fcmTokens: [{
+    type: String,
+  }],
+  // Notification preferences
+  notificationSettings: {
+    attendanceAlerts: {
+      type: Boolean,
+      default: true,
+    },
+    dailySummary: {
+      type: Boolean,
+      default: true,
+    },
+    absentAlerts: {
+      type: Boolean,
+      default: true,
+    },
+  },
   createdAt: {
     type: Date,
     default: Date.now,

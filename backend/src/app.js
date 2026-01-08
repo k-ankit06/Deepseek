@@ -6,6 +6,10 @@ const path = require('path');
 const routes = require('./routes');
 const { errorHandler } = require('./middleware/validationMiddleware');
 const offlineSyncService = require('./services/offlineSyncService');
+const { initializeFirebase } = require('./services/firebaseService');
+
+// Initialize Firebase for push notifications
+initializeFirebase();
 
 const app = express();
 

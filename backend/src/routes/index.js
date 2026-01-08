@@ -9,6 +9,7 @@ const reportRoutes = require('./reportRoutes');
 const userRoutes = require('./userRoutes');
 const classRoutes = require('./classRoutes');
 const aiRoutes = require('./aiRoutes');
+const notificationRoutes = require('./notificationRoutes');
 const { protect } = require('../middleware/authMiddleware');
 
 // Health check endpoint
@@ -34,6 +35,7 @@ router.use(`${apiPrefix}/attendance`, attendanceRoutes);
 router.use(`${apiPrefix}/ai`, aiRoutes);
 router.use(`${apiPrefix}/reports`, reportRoutes);
 router.use(`${apiPrefix}/users`, userRoutes);
+router.use(`${apiPrefix}/notifications`, notificationRoutes);
 
 // 404 handler for API routes
 router.use(`${apiPrefix}/*`, (req, res) => {
