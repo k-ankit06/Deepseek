@@ -35,6 +35,14 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
+      // Email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(credentials.email)) {
+        toast.error('Please enter a valid email address (e.g., user@school.com)');
+        setIsLoading(false);
+        return;
+      }
+
       // For teacher login, school code is required
       if (userType === 'teacher' && !credentials.schoolCode) {
         toast.error('School code is required for teacher login');

@@ -95,6 +95,12 @@ const TeacherManagementPage = () => {
       toast.error('Please enter email');
       return;
     }
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newTeacher.email)) {
+      toast.error('Please enter a valid email address (e.g., teacher@school.com)');
+      return;
+    }
     if (!editingTeacher && (!newTeacher.password || newTeacher.password.length < 6)) {
       toast.error('Password must be at least 6 characters');
       return;

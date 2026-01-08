@@ -145,8 +145,24 @@ const SchoolSignupPage = () => {
             toast.error('Please enter admin name');
             return false;
         }
+        // Admin name should not contain numbers
+        if (/\d/.test(formData.adminName)) {
+            toast.error('Admin name should not contain numbers');
+            return false;
+        }
         if (!formData.adminEmail.trim()) {
             toast.error('Please enter admin email');
+            return false;
+        }
+        // Email format validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.adminEmail)) {
+            toast.error('Please enter a valid email address (e.g., admin@school.com)');
+            return false;
+        }
+        // Admin phone validation - only numbers
+        if (formData.adminPhone && !/^\d*$/.test(formData.adminPhone)) {
+            toast.error('Admin phone should contain only digits');
             return false;
         }
         if (!formData.adminPassword) {
@@ -212,11 +228,21 @@ const SchoolSignupPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 flex items-center justify-center p-4">
+        <div
+            className="min-h-screen flex items-center justify-center p-4 relative"
+            style={{
+                backgroundImage: 'url(/images/rural-school-bg.png)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat'
+            }}
+        >
+            {/* Overlay for better readability */}
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden relative z-10"
             >
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
