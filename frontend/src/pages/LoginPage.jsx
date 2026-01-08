@@ -38,14 +38,14 @@ const LoginPage = () => {
       // Email format validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(credentials.email)) {
-        toast.error('Please enter a valid email address (e.g., user@school.com)');
+        toast.error('Please enter a valid email address (e.g., user@school.com)', { id: 'login-validation' });
         setIsLoading(false);
         return;
       }
 
       // For teacher login, school code is required
       if (userType === 'teacher' && !credentials.schoolCode) {
-        toast.error('School code is required for teacher login');
+        toast.error('School code is required for teacher login', { id: 'login-validation' });
         setIsLoading(false);
         return;
       }
@@ -65,7 +65,7 @@ const LoginPage = () => {
         localStorage.setItem('user', JSON.stringify(userData));
         localStorage.setItem('token', token);
 
-        toast.success('Login successful!');
+        toast.success('Login successful!', { id: 'login-success' });
 
         // Redirect based on role
         if (userData.role === 'admin' || userType === 'admin') {
@@ -74,11 +74,11 @@ const LoginPage = () => {
           window.location.href = '/teacher';
         }
       } else {
-        toast.error(response.message || 'Invalid credentials');
+        toast.error(response.message || 'Invalid credentials', { id: 'login-error' });
       }
     } catch (error) {
       console.error('Login error:', error);
-      toast.error(error.message || 'Login failed. Please check your credentials.');
+      toast.error(error.message || 'Login failed. Please check your credentials.', { id: 'login-error' });
     } finally {
       setIsLoading(false);
     }
@@ -233,9 +233,9 @@ const LoginPage = () => {
                     className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                     onClick={() => {
                       if (credentials.email) {
-                        toast.success(`📧 Password reset link sent to ${credentials.email}`)
+                        toast.success(`📧 Password reset link sent to ${credentials.email}`, { id: 'forgot-password' })
                       } else {
-                        toast.error('Please enter your email address first')
+                        toast.error('Please enter your email address first', { id: 'forgot-password' })
                       }
                     }}
                   >
