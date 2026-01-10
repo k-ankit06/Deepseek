@@ -257,7 +257,7 @@ const AttendanceCapture = () => {
       if (isOfflineMode || !isOnline) {
         toast('📴 Offline Mode: Please mark attendance manually', { icon: 'ℹ️' })
 
-        // All students start as "unknown" - teacher will manually mark
+        // All students start as "present" - teacher will manually mark
         setStudents(prev => prev.map(s => ({
           ...s,
           status: 'present', // Default to present, teacher can toggle
@@ -280,65 +280,58 @@ const AttendanceCapture = () => {
         const recognitions = result.data.recognitions || result.data.recognized || []
         const errors = result.data.errors || []
 
-        // Update students based on recognition results
-        setStudents(prev => prev.map(student => {
-          // Find if this student was recognized
-          const recognition = recognitions.find(r =>
-            r.studentId === student._id ||
-            r.studentId === student._id?.toString()
-          )
+        // ONLY keep students who were recognized (high confidence)
+        // Students who weren't detected won't be in the list at all
+        const recognizedStudents = students
+          .map(student => {
+            // Find if this student was recognized
+            const recognition = recognitions.find(r =>
+              r.studentId === student._id ||
+              r.studentId === student._id?.toString()
+            )
 
-          if (recognition) {
-            return {
-              ...student,
-              status: 'present',
-              confidence: recognition.confidence || recognition.confidenceScore * 100 || 0
+            if (recognition) {
+              return {
+                ...student,
+                status: 'present',
+                confidence: recognition.confidence || recognition.confidenceScore * 100 || 0
+              }
             }
-          } else {
-            return {
-              ...student,
-              status: 'absent',
-              confidence: 0
-            }
-          }
-        }))
+            return null // Not recognized, don't include
+          })
+          .filter(s => s !== null) // Remove unrecognized students
+
+        // Update students list with ONLY recognized students
+        setStudents(recognizedStudents)
 
         // Show results
-        const presentCount = recognitions.length
+        const presentCount = recognizedStudents.length
         const totalCount = students.length
 
         if (presentCount > 0) {
-          toast.success(`${presentCount} student(s) recognized out of ${totalCount}`)
+          toast.success(`✅ ${presentCount} student(s) recognized out of ${totalCount} in class`, { id: 'recognition-result' })
         } else if (errors.length > 0) {
-          toast.error(errors[0])
+          toast.error(errors[0], { id: 'recognition-result' })
         } else {
-          toast.error('No faces recognized. Please try again with clear image.')
+          toast.error('No faces recognized. Please try again with clear image.', { id: 'recognition-result' })
         }
 
         setStep(3)
       } else {
         // AI service failed - show error
         const errorMsg = result.message || result.error || 'Face recognition failed'
-        toast.error(errorMsg)
+        toast.error(errorMsg, { id: 'recognition-result' })
 
-        // Mark all as absent since recognition failed
-        setStudents(prev => prev.map(s => ({
-          ...s,
-          status: 'absent',
-          confidence: 0
-        })))
+        // Show empty list since no one was recognized
+        setStudents([])
         setStep(3)
       }
     } catch (error) {
       console.error('Recognition error:', error)
-      toast.error('Failed to process image: ' + (error.message || 'Please try again'))
+      toast.error('Failed to process image: ' + (error.message || 'Please try again'), { id: 'recognition-result' })
 
-      // Mark all as absent on error
-      setStudents(prev => prev.map(s => ({
-        ...s,
-        status: 'absent',
-        confidence: 0
-      })))
+      // Show empty list on error
+      setStudents([])
       setStep(3)
     } finally {
       setIsProcessing(false)

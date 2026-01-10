@@ -5,6 +5,7 @@ const School = require('../models/School');
 const FaceEncoding = require('../models/FaceEncoding');
 const { default: axios } = require('axios');
 const mongoose = require('mongoose');
+const { sendBulkAttendanceNotifications } = require('../services/firebaseService');
 
 // @desc    Mark attendance for a class
 // @route   POST /api/attendance/mark
@@ -134,6 +135,42 @@ const markAttendance = async (req, res) => {
     // Process recognition results for face registration updates
     if (recognitionResults && Array.isArray(recognitionResults)) {
       await processRecognitionResults(recognitionResults, schoolId);
+    }
+
+    // Send FCM notifications to parents
+    try {
+      const notificationRecords = [];
+      const className = studentClass ? `${studentClass.grade || studentClass.name}-${studentClass.section || ''}` : 'Class';
+      const currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      const currentDate = new Date().toLocaleDateString('en-IN');
+
+      for (const detail of results.details) {
+        if (detail.status === 'success') {
+          // Get student with parent contact
+          const student = await Student.findById(detail.studentId).select('parentPhone firstName lastName');
+
+          if (student && student.parentPhone) {
+            notificationRecords.push({
+              parentToken: student.parentPhone, // This would be FCM token if registered
+              studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
+              status: detail.attendanceStatus,
+              className: className,
+              time: currentTime,
+              date: currentDate
+            });
+          }
+        }
+      }
+
+      // Send bulk notifications (async, don't wait)
+      if (notificationRecords.length > 0) {
+        sendBulkAttendanceNotifications(notificationRecords)
+          .then(result => console.log(`📱 Sent ${result.sent} attendance notifications`))
+          .catch(err => console.error('Notification error:', err));
+      }
+    } catch (notifError) {
+      console.error('Error sending notifications:', notifError);
+      // Don't fail the request if notifications fail
     }
 
     res.status(200).json({
