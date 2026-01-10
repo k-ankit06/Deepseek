@@ -206,56 +206,58 @@ const StudentsPage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6 md:mb-8"
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             <BackButton />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-                <Users className="mr-3" size={32} />
-                Student Management
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-3xl font-bold text-gray-800 flex items-center">
+                <Users className="mr-2 md:mr-3 flex-shrink-0" size={24} />
+                <span className="truncate">Student Management</span>
               </h1>
-              <p className="text-gray-600 mt-2">Manage all student records and information</p>
+              <p className="text-sm md:text-base text-gray-600 mt-1 truncate">Manage all student records and information</p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3 flex-shrink-0">
             <Button
               variant="outline"
               icon={RefreshCw}
+              size="sm"
               onClick={fetchData}
               disabled={isLoading}
             >
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
             <Button
               variant="primary"
               icon={UserPlus}
+              size="sm"
               onClick={() => navigate('/student-registration')}
             >
-              Add New Student
+              <span className="hidden sm:inline">Add New </span>Student
             </Button>
           </div>
         </div>
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card className="text-center p-5">
-          <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
-          <div className="text-sm text-gray-600">Total Students</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+        <Card className="text-center p-3 md:p-5">
+          <div className="text-xl md:text-2xl font-bold text-gray-800">{stats.total}</div>
+          <div className="text-xs md:text-sm text-gray-600">Total Students</div>
         </Card>
-        <Card className="text-center p-5 bg-green-50">
-          <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-          <div className="text-sm text-gray-600">Active Students</div>
+        <Card className="text-center p-3 md:p-5 bg-green-50">
+          <div className="text-xl md:text-2xl font-bold text-green-600">{stats.active}</div>
+          <div className="text-xs md:text-sm text-gray-600">Active Students</div>
         </Card>
-        <Card className="text-center p-5 bg-blue-50">
-          <div className="text-2xl font-bold text-blue-600">{stats.classes}</div>
-          <div className="text-sm text-gray-600">Classes</div>
+        <Card className="text-center p-3 md:p-5 bg-blue-50">
+          <div className="text-xl md:text-2xl font-bold text-blue-600">{stats.classes}</div>
+          <div className="text-xs md:text-sm text-gray-600">Classes</div>
         </Card>
-        <Card className="text-center p-5 bg-purple-50">
-          <div className="text-2xl font-bold text-purple-600">{stats.faceRegistered}</div>
-          <div className="text-sm text-gray-600">Face Registered</div>
+        <Card className="text-center p-3 md:p-5 bg-purple-50">
+          <div className="text-xl md:text-2xl font-bold text-purple-600">{stats.faceRegistered}</div>
+          <div className="text-xs md:text-sm text-gray-600">Face Registered</div>
         </Card>
       </div>
 

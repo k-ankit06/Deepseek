@@ -101,33 +101,36 @@ const TeacherDashboard = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6 md:mb-8"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mr-4">
-              <User className="text-white" size={28} />
+            <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mr-3 md:mr-4 flex-shrink-0">
+              <User className="text-white" size={24} />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800">Teacher Dashboard</h1>
-              <p className="text-gray-600">Welcome back, {user?.name || 'Teacher'}! 👋</p>
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-3xl font-bold text-gray-800 truncate">Teacher Dashboard</h1>
+              <p className="text-sm md:text-base text-gray-600 truncate">Welcome back, {user?.name || 'Teacher'}! 👋</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <Button
               variant="primary"
               icon={Camera}
+              size="sm"
               onClick={() => navigate('/attendance')}
+              className="text-sm md:text-base"
             >
-              Take Attendance
+              <span className="hidden sm:inline">Take </span>Attendance
             </Button>
             <Button
               variant="outline"
               icon={LogOut}
+              size="sm"
               onClick={handleLogout}
               className="text-red-600 border-red-200 hover:bg-red-50"
             >
-              Logout
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>
@@ -139,50 +142,50 @@ const TeacherDashboard = () => {
       ) : (
         <>
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 rounded-xl bg-blue-100">
-                  <Users className="text-blue-600" size={22} />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+            <Card className="p-3 md:p-5">
+              <div className="flex items-center justify-center mb-2 md:mb-4">
+                <div className="p-2 md:p-3 rounded-xl bg-blue-100">
+                  <Users className="text-blue-600" size={20} />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-gray-800">{stats.totalStudents}</div>
-              <div className="text-sm text-gray-600 mt-1">Total Students</div>
+              <div className="text-xl md:text-2xl font-bold text-gray-800 text-center">{stats.totalStudents}</div>
+              <div className="text-xs md:text-sm text-gray-600 mt-1 text-center">Total Students</div>
             </Card>
 
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 rounded-xl bg-green-100">
-                  <BookOpen className="text-green-600" size={22} />
+            <Card className="p-3 md:p-5">
+              <div className="flex items-center justify-center mb-2 md:mb-4">
+                <div className="p-2 md:p-3 rounded-xl bg-green-100">
+                  <BookOpen className="text-green-600" size={20} />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-gray-800">{stats.totalClasses}</div>
-              <div className="text-sm text-gray-600 mt-1">Total Classes</div>
+              <div className="text-xl md:text-2xl font-bold text-gray-800 text-center">{stats.totalClasses}</div>
+              <div className="text-xs md:text-sm text-gray-600 mt-1 text-center">Total Classes</div>
             </Card>
 
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 rounded-xl bg-purple-100">
-                  <CheckCircle className="text-purple-600" size={22} />
+            <Card className="p-3 md:p-5">
+              <div className="flex items-center justify-center mb-2 md:mb-4">
+                <div className="p-2 md:p-3 rounded-xl bg-purple-100">
+                  <CheckCircle className="text-purple-600" size={20} />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-gray-800">{stats.todayPresent}</div>
-              <div className="text-sm text-gray-600 mt-1">Present Today</div>
+              <div className="text-xl md:text-2xl font-bold text-gray-800 text-center">{stats.todayPresent}</div>
+              <div className="text-xs md:text-sm text-gray-600 mt-1 text-center">Present Today</div>
             </Card>
 
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 rounded-xl bg-orange-100">
-                  <TrendingUp className="text-orange-600" size={22} />
+            <Card className="p-3 md:p-5">
+              <div className="flex items-center justify-center mb-2 md:mb-4">
+                <div className="p-2 md:p-3 rounded-xl bg-orange-100">
+                  <TrendingUp className="text-orange-600" size={20} />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-gray-800">{stats.attendanceRate}%</div>
-              <div className="text-sm text-gray-600 mt-1">Attendance Rate</div>
+              <div className="text-xl md:text-2xl font-bold text-gray-800 text-center">{stats.attendanceRate}%</div>
+              <div className="text-xs md:text-sm text-gray-600 mt-1 text-center">Attendance Rate</div>
             </Card>
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
             {/* Quick Actions */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}

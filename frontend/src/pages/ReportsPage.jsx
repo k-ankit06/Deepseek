@@ -169,27 +169,27 @@ const ReportsPage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6 md:mb-8"
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             <BackButton />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-                <BarChart3 className="mr-3" size={32} />
-                Reports & Analytics
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-3xl font-bold text-gray-800 flex items-center">
+                <BarChart3 className="mr-2 md:mr-3 flex-shrink-0" size={24} />
+                <span className="truncate">Reports & Analytics</span>
               </h1>
-              <p className="text-gray-600 mt-2">Generate and analyze attendance reports</p>
+              <p className="text-sm md:text-base text-gray-600 mt-1 truncate">Generate and analyze attendance reports</p>
             </div>
           </div>
-          <Button variant="primary" icon={Download} onClick={handleExportAllReports}>
-            Export All Reports
+          <Button variant="primary" icon={Download} size="sm" onClick={handleExportAllReports}>
+            <span className="hidden sm:inline">Export All </span>Reports
           </Button>
         </div>
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
         {reportStats.map((stat, index) => (
           <motion.div
             key={index}
@@ -197,19 +197,19 @@ const ReportsPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: index * 0.1 }}
           >
-            <Card className="p-5 text-center">
-              <div className={`w-12 h-12 rounded-xl bg-${stat.color}-100 flex items-center justify-center mx-auto mb-3`}>
-                <stat.icon className={`text-${stat.color}-600`} size={24} />
+            <Card className="p-3 md:p-5 text-center">
+              <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-${stat.color}-100 flex items-center justify-center mx-auto mb-2 md:mb-3`}>
+                <stat.icon className={`text-${stat.color}-600`} size={20} />
               </div>
-              <div className="text-2xl font-bold text-gray-800">{stat.value}</div>
-              <div className="text-sm text-gray-600">{stat.title}</div>
+              <div className="text-xl md:text-2xl font-bold text-gray-800">{stat.value}</div>
+              <div className="text-xs md:text-sm text-gray-600">{stat.title}</div>
             </Card>
           </motion.div>
         ))}
       </div>
 
       {/* Report Templates */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
         {reportTemplates.map((template, index) => (
           <motion.div
             key={index}
@@ -218,14 +218,14 @@ const ReportsPage = () => {
             transition={{ delay: index * 0.1 }}
           >
             <Card
-              className="p-5 text-center cursor-pointer hover-lift"
+              className="p-3 md:p-5 text-center cursor-pointer hover-lift"
               onClick={() => setActiveTab(template.name.toLowerCase().replace(' ', '-').split('-')[0])}
             >
-              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mx-auto mb-3">
-                <template.icon className="text-blue-600" size={24} />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-blue-100 flex items-center justify-center mx-auto mb-2 md:mb-3">
+                <template.icon className="text-blue-600" size={20} />
               </div>
-              <h3 className="font-bold text-gray-800">{template.name}</h3>
-              <p className="text-sm text-gray-600 mt-1">{template.description}</p>
+              <h3 className="font-bold text-gray-800 text-sm md:text-base">{template.name}</h3>
+              <p className="text-xs md:text-sm text-gray-600 mt-1 hidden sm:block">{template.description}</p>
             </Card>
           </motion.div>
         ))}
