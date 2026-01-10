@@ -189,39 +189,40 @@ const AdminDashboard = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6 md:mb-8"
       >
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center mb-2">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mr-3">
-                <Shield className="text-white" size={24} />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
-                <p className="text-gray-600">Welcome back, {user?.name || 'Administrator'} 👋</p>
-              </div>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center mr-3">
+              <Shield className="text-white" size={20} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+              <p className="text-sm md:text-base text-gray-600 truncate">Welcome back, {user?.name || 'Administrator'} 👋</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="outline"
               icon={Bell}
+              size="sm"
               onClick={handleMarkAllRead}
             >
-              Notifications
+              <span className="hidden sm:inline">Notifi</span>cations
             </Button>
             <Button
               variant="primary"
               icon={Download}
+              size="sm"
               onClick={handleExportReport}
             >
-              Export Report
+              <span className="hidden sm:inline">Export </span>Report
             </Button>
             <Button
               variant="outline"
               icon={LogOut}
+              size="sm"
               onClick={handleLogout}
               className="text-red-600 border-red-200 hover:bg-red-50"
             >
@@ -232,14 +233,14 @@ const AdminDashboard = () => {
       </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-4 mb-6 md:mb-8">
         {[
-          { label: 'Total Students', value: stats.totalStudents, icon: Users, color: 'blue', change: '+12' },
+          { label: 'Students', value: stats.totalStudents, icon: Users, color: 'blue', change: '+12' },
           { label: 'Teachers', value: stats.totalTeachers, icon: Users, color: 'green', change: '+2' },
           { label: 'Classes', value: stats.totalClasses, icon: BookOpen, color: 'purple', change: '+1' },
-          { label: "Today's Attendance", value: `${stats.todayAttendance}%`, icon: TrendingUp, color: 'orange', change: '+3%' },
-          { label: 'Monthly Average', value: `${stats.monthlyAverage}%`, icon: Calendar, color: 'cyan', change: '+2%' },
-          { label: 'Pending Tasks', value: stats.pendingTasks, icon: AlertCircle, color: 'red', change: '-1' },
+          { label: 'Today', value: `${stats.todayAttendance}%`, icon: TrendingUp, color: 'orange', change: '+3%' },
+          { label: 'Monthly', value: `${stats.monthlyAverage}%`, icon: Calendar, color: 'cyan', change: '+2%' },
+          { label: 'Pending', value: stats.pendingTasks, icon: AlertCircle, color: 'red', change: '-1' },
         ].map((stat, index) => (
           <motion.div
             key={index}
@@ -247,18 +248,18 @@ const AdminDashboard = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: index * 0.05 }}
           >
-            <Card className="p-5 hover-lift">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-xl bg-${stat.color}-100`}>
-                  <stat.icon className={`text-${stat.color}-600`} size={22} />
+            <Card className="p-3 md:p-5 hover-lift">
+              <div className="flex items-center justify-between mb-2 md:mb-4">
+                <div className={`p-2 md:p-3 rounded-xl bg-${stat.color}-100`}>
+                  <stat.icon className={`text-${stat.color}-600`} size={18} />
                 </div>
-                <span className={`text-sm font-medium ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                <span className={`text-xs font-medium hidden sm:inline ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
                   }`}>
                   {stat.change}
                 </span>
               </div>
-              <div className="text-2xl font-bold text-gray-800">{stat.value}</div>
-              <div className="text-sm text-gray-600 mt-1">{stat.label}</div>
+              <div className="text-lg md:text-2xl font-bold text-gray-800">{stat.value}</div>
+              <div className="text-xs md:text-sm text-gray-600 mt-1 truncate">{stat.label}</div>
             </Card>
           </motion.div>
         ))}

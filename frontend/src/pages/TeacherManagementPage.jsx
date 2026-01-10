@@ -182,48 +182,50 @@ const TeacherManagementPage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6 md:mb-8"
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             <BackButton to="/admin" />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-                <Users className="mr-3" size={32} />
-                Teacher Management
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-3xl font-bold text-gray-800 flex items-center">
+                <Users className="mr-2 md:mr-3 flex-shrink-0" size={24} />
+                <span className="truncate">Teacher Management</span>
               </h1>
-              <p className="text-gray-600 mt-2">Manage teacher accounts and class assignments</p>
+              <p className="text-sm md:text-base text-gray-600 mt-1 truncate">Manage teacher accounts and class assignments</p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3 flex-shrink-0">
             <Button
               variant="outline"
               icon={RefreshCw}
+              size="sm"
               onClick={fetchData}
               disabled={isLoading}
             >
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
             <Button
               variant="primary"
               icon={Plus}
+              size="sm"
               onClick={() => setShowAddModal(true)}
             >
-              Add New Teacher
+              <span className="hidden sm:inline">Add New </span>Teacher
             </Button>
           </div>
         </div>
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <Card className="p-5 text-center">
-          <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
-          <div className="text-sm text-gray-600">Total Teachers</div>
+      <div className="grid grid-cols-2 gap-3 md:gap-4 mb-6 md:mb-8">
+        <Card className="p-3 md:p-5 text-center">
+          <div className="text-xl md:text-2xl font-bold text-gray-800">{stats.total}</div>
+          <div className="text-xs md:text-sm text-gray-600">Total Teachers</div>
         </Card>
-        <Card className="p-5 text-center bg-green-50">
-          <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-          <div className="text-sm text-gray-600">Active Teachers</div>
+        <Card className="p-3 md:p-5 text-center bg-green-50">
+          <div className="text-xl md:text-2xl font-bold text-green-600">{stats.active}</div>
+          <div className="text-xs md:text-sm text-gray-600">Active Teachers</div>
         </Card>
       </div>
 
@@ -357,14 +359,15 @@ const TeacherManagementPage = () => {
 
       {/* Add Teacher Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl max-w-md w-full p-6"
+            className="bg-white rounded-xl max-w-md w-full my-4 sm:my-0 flex flex-col max-h-[90vh]"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-800">{editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}</h2>
+            {/* Modal Header - Sticky */}
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b flex-shrink-0">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800">{editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}</h2>
               <button
                 onClick={() => {
                   setShowAddModal(false);
@@ -377,154 +380,162 @@ const TeacherManagementPage = () => {
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name *
-                </label>
-                <Input
-                  value={newTeacher.name}
-                  onChange={(e) => setNewTeacher({ ...newTeacher, name: e.target.value })}
-                  placeholder="Enter full name"
-                />
-              </div>
+            {/* Modal Body - Scrollable */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1">
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email *
-                </label>
-                <Input
-                  type="email"
-                  value={newTeacher.email}
-                  onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
-                  placeholder="Enter email address"
-                  disabled={!!editingTeacher}
-                />
-                {editingTeacher && (
-                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
-                )}
-              </div>
-
-              {!editingTeacher && (
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Password *
+                    Full Name *
                   </label>
                   <Input
-                    type="password"
-                    value={newTeacher.password}
-                    onChange={(e) => setNewTeacher({ ...newTeacher, password: e.target.value })}
-                    placeholder="Min 6 characters"
+                    value={newTeacher.name}
+                    onChange={(e) => setNewTeacher({ ...newTeacher, name: e.target.value })}
+                    placeholder="Enter full name"
                   />
                 </div>
-              )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number
-                </label>
-                <Input
-                  type="tel"
-                  value={newTeacher.phone}
-                  onChange={(e) => setNewTeacher({ ...newTeacher, phone: e.target.value })}
-                  placeholder="Enter phone number"
-                />
-              </div>
-
-              {/* Subjects - Tag Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subjects (Press Enter to add)
-                </label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {newTeacher.subjects.map((subject, index) => (
-                    <span
-                      key={index}
-                      className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-1"
-                    >
-                      {subject}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = newTeacher.subjects.filter((_, i) => i !== index);
-                          setNewTeacher({ ...newTeacher, subjects: updated });
-                        }}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email *
+                  </label>
+                  <Input
+                    type="email"
+                    value={newTeacher.email}
+                    onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
+                    placeholder="Enter email address"
+                    disabled={!!editingTeacher}
+                  />
+                  {editingTeacher && (
+                    <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                  )}
                 </div>
-                <Input
-                  value={subjectInput}
-                  onChange={(e) => setSubjectInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && subjectInput.trim()) {
-                      e.preventDefault();
-                      if (!newTeacher.subjects.includes(subjectInput.trim())) {
-                        setNewTeacher({
-                          ...newTeacher,
-                          subjects: [...newTeacher.subjects, subjectInput.trim()]
-                        });
+
+                {!editingTeacher && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Password *
+                    </label>
+                    <Input
+                      type="password"
+                      value={newTeacher.password}
+                      onChange={(e) => setNewTeacher({ ...newTeacher, password: e.target.value })}
+                      placeholder="Min 6 characters"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number
+                  </label>
+                  <Input
+                    type="tel"
+                    value={newTeacher.phone}
+                    onChange={(e) => setNewTeacher({ ...newTeacher, phone: e.target.value })}
+                    placeholder="Enter phone number"
+                  />
+                </div>
+
+                {/* Subjects - Tag Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Subjects (Press Enter to add)
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {newTeacher.subjects.map((subject, index) => (
+                      <span
+                        key={index}
+                        className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-1"
+                      >
+                        {subject}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = newTeacher.subjects.filter((_, i) => i !== index);
+                            setNewTeacher({ ...newTeacher, subjects: updated });
+                          }}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <Input
+                    value={subjectInput}
+                    onChange={(e) => setSubjectInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && subjectInput.trim()) {
+                        e.preventDefault();
+                        if (!newTeacher.subjects.includes(subjectInput.trim())) {
+                          setNewTeacher({
+                            ...newTeacher,
+                            subjects: [...newTeacher.subjects, subjectInput.trim()]
+                          });
+                        }
+                        setSubjectInput('');
                       }
-                      setSubjectInput('');
-                    }
-                  }}
-                  placeholder="Type subject and press Enter (e.g. Math, English)"
-                />
-              </div>
+                    }}
+                    placeholder="Type subject and press Enter (e.g. Math, English)"
+                  />
+                </div>
 
-              {/* Qualification */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Qualification
-                </label>
-                <Input
-                  value={newTeacher.qualification}
-                  onChange={(e) => setNewTeacher({ ...newTeacher, qualification: e.target.value })}
-                  placeholder="e.g. B.Ed, M.Ed, PhD"
-                />
-              </div>
+                {/* Qualification */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Qualification
+                  </label>
+                  <Input
+                    value={newTeacher.qualification}
+                    onChange={(e) => setNewTeacher({ ...newTeacher, qualification: e.target.value })}
+                    placeholder="e.g. B.Ed, M.Ed, PhD"
+                  />
+                </div>
 
-              {/* Specialization */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Specialization
-                </label>
-                <Input
-                  value={newTeacher.specialization}
-                  onChange={(e) => setNewTeacher({ ...newTeacher, specialization: e.target.value })}
-                  placeholder="e.g. Mathematics, Science, English"
-                />
-              </div>
+                {/* Specialization */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Specialization
+                  </label>
+                  <Input
+                    value={newTeacher.specialization}
+                    onChange={(e) => setNewTeacher({ ...newTeacher, specialization: e.target.value })}
+                    placeholder="e.g. Mathematics, Science, English"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Assign Classes
-                </label>
-                <select
-                  multiple
-                  value={newTeacher.assignedClasses}
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions, option => option.value);
-                    setNewTeacher({ ...newTeacher, assignedClasses: selected });
-                  }}
-                  className="w-full p-3 border rounded-lg h-24"
-                >
-                  {classes.map(cls => (
-                    <option key={cls._id} value={cls._id}>
-                      {cls.name || `Class ${cls.grade}`} - {cls.section}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Assign Classes
+                  </label>
+                  <select
+                    multiple
+                    value={newTeacher.assignedClasses}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, option => option.value);
+                      setNewTeacher({ ...newTeacher, assignedClasses: selected });
+                    }}
+                    className="w-full p-3 border rounded-lg h-24"
+                  >
+                    {classes.map(cls => (
+                      <option key={cls._id} value={cls._id}>
+                        {cls.name || `Class ${cls.grade}`} - {cls.section}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="flex gap-3 pt-4">
+              </div>
+            </div>
+
+            {/* Modal Footer - Sticky */}
+            <div className="p-4 sm:p-6 border-t bg-gray-50 flex-shrink-0">
+              <div className="flex gap-2 sm:gap-3">
                 <Button
                   variant="outline"
                   className="flex-1"
+                  size="sm"
                   onClick={() => {
                     setShowAddModal(false);
                     setEditingTeacher(null);
@@ -536,11 +547,12 @@ const TeacherManagementPage = () => {
                 <Button
                   variant="primary"
                   className="flex-1"
+                  size="sm"
                   icon={isSaving ? Loader2 : Save}
                   onClick={handleSaveTeacher}
                   disabled={isSaving}
                 >
-                  {isSaving ? 'Saving...' : (editingTeacher ? 'Update Teacher' : 'Add Teacher')}
+                  {isSaving ? 'Saving...' : (editingTeacher ? 'Update' : 'Add Teacher')}
                 </Button>
               </div>
             </div>

@@ -268,26 +268,27 @@ const StudentRegistrationPage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6 md:mb-8"
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             <BackButton to="/students" />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-                <UserPlus className="mr-3" size={32} />
-                Student Registration
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-3xl font-bold text-gray-800 flex items-center">
+                <UserPlus className="mr-2 md:mr-3 flex-shrink-0" size={24} />
+                <span className="truncate">Student Registration</span>
               </h1>
-              <p className="text-gray-600 mt-2">Register new students with face capture for attendance</p>
+              <p className="text-sm md:text-base text-gray-600 mt-1 truncate">Register new students with face capture for attendance</p>
             </div>
           </div>
           <Button
             variant="primary"
             icon={isSaving ? Loader2 : Save}
+            size="sm"
             onClick={handleSave}
             disabled={isSaving}
           >
-            {isSaving ? 'Saving...' : 'Register Student'}
+            {isSaving ? 'Saving...' : <><span className="hidden sm:inline">Register </span>Student</>}
           </Button>
         </div>
       </motion.div>

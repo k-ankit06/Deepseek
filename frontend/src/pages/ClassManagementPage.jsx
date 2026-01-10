@@ -128,52 +128,54 @@ const ClassManagementPage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6 md:mb-8"
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             <BackButton to="/admin" />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-                <BookOpen className="mr-3" size={32} />
-                Class Management
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-3xl font-bold text-gray-800 flex items-center">
+                <BookOpen className="mr-2 md:mr-3 flex-shrink-0" size={24} />
+                <span className="truncate">Class Management</span>
               </h1>
-              <p className="text-gray-600 mt-2">Create and manage classes and sections</p>
+              <p className="text-sm md:text-base text-gray-600 mt-1 truncate">Create and manage classes and sections</p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3 flex-shrink-0">
             <Button
               variant="outline"
               icon={RefreshCw}
+              size="sm"
               onClick={fetchClasses}
               disabled={isLoading}
             >
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
             <Button
               variant="primary"
               icon={Plus}
+              size="sm"
               onClick={() => setShowAddModal(true)}
             >
-              Add New Class
+              <span className="hidden sm:inline">Add New </span>Class
             </Button>
           </div>
         </div>
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Card className="p-5 text-center">
-          <div className="text-2xl font-bold text-gray-800">{stats.totalClasses}</div>
-          <div className="text-sm text-gray-600">Total Classes</div>
+      <div className="grid grid-cols-3 gap-2 md:gap-4 mb-6 md:mb-8">
+        <Card className="p-2 md:p-5 text-center">
+          <div className="text-lg md:text-2xl font-bold text-gray-800">{stats.totalClasses}</div>
+          <div className="text-xs md:text-sm text-gray-600">Classes</div>
         </Card>
-        <Card className="p-5 text-center bg-blue-50">
-          <div className="text-2xl font-bold text-blue-600">{stats.totalSections}</div>
-          <div className="text-sm text-gray-600">Total Sections</div>
+        <Card className="p-2 md:p-5 text-center bg-blue-50">
+          <div className="text-lg md:text-2xl font-bold text-blue-600">{stats.totalSections}</div>
+          <div className="text-xs md:text-sm text-gray-600">Sections</div>
         </Card>
-        <Card className="p-5 text-center bg-green-50">
-          <div className="text-2xl font-bold text-green-600">{stats.totalStudents}</div>
-          <div className="text-sm text-gray-600">Total Students</div>
+        <Card className="p-2 md:p-5 text-center bg-green-50">
+          <div className="text-lg md:text-2xl font-bold text-green-600">{stats.totalStudents}</div>
+          <div className="text-xs md:text-sm text-gray-600">Students</div>
         </Card>
       </div>
 
