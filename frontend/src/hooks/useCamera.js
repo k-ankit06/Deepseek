@@ -6,9 +6,9 @@ export const useCamera = (options = {}) => {
   const {
     mode = CAMERA_MODES.PHOTO,
     facingMode = 'user',
-    quality = 0.8,
-    maxWidth = 1280,
-    maxHeight = 720,
+    quality = 1.0,          // Maximum quality for best clarity
+    maxWidth = 1920,        // Full HD width
+    maxHeight = 1080,       // Full HD height
     constraints = {}
   } = options
 
