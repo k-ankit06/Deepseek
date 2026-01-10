@@ -356,8 +356,8 @@ const CameraCapture = ({
       className={`relative rounded-2xl overflow-hidden bg-gray-900 ${className}`}
       ref={videoContainerRef}
     >
-      {/* Camera View */}
-      <div className="relative aspect-video bg-black">
+      {/* Camera View - aspect-[3/4] on mobile, aspect-video on md+ */}
+      <div className="relative aspect-[3/4] sm:aspect-[4/3] md:aspect-video bg-black max-h-[60vh] md:max-h-none">
         {/* Video Feed - ALWAYS rendered so ref is available */}
         <video
           ref={videoRef}
@@ -522,38 +522,38 @@ const CameraCapture = ({
       </div>
 
       {/* Camera Controls */}
-      <div className="p-4 bg-gradient-to-t from-black/90 to-transparent">
-        <div className="flex items-center justify-between mb-4">
+      <div className="p-3 md:p-4 bg-gradient-to-t from-black/90 to-transparent">
+        <div className="flex items-center justify-between mb-3 md:mb-4">
           {/* Left Controls */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
             <button
               onClick={toggleFlash}
-              className={`p-3 rounded-full ${cameraSettings.flash
+              className={`p-2 sm:p-3 rounded-full ${cameraSettings.flash
                 ? 'bg-yellow-500 text-white'
                 : 'bg-white/20 text-white hover:bg-white/30'
                 } transition-colors`}
               aria-label="Toggle flash"
             >
-              <Zap size={20} />
+              <Zap size={18} />
             </button>
 
             <button
               onClick={switchCamera}
-              className="p-3 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+              className="p-2 sm:p-3 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
               aria-label="Switch camera"
             >
-              <RefreshCw size={20} />
+              <RefreshCw size={18} />
             </button>
 
             <button
               onClick={toggleGrid}
-              className={`p-3 rounded-full ${cameraSettings.grid
+              className={`p-2 sm:p-3 rounded-full ${cameraSettings.grid
                 ? 'bg-primary-500 text-white'
                 : 'bg-white/20 text-white hover:bg-white/30'
-                } transition-colors`}
+                } transition-colors hidden sm:block`}
               aria-label="Toggle grid"
             >
-              <div className="w-5 h-5 grid grid-cols-2 grid-rows-2 gap-0.5">
+              <div className="w-4 h-4 sm:w-5 sm:h-5 grid grid-cols-2 grid-rows-2 gap-0.5">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="border border-current" />
                 ))}
@@ -567,7 +567,7 @@ const CameraCapture = ({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleCapture}
-              className={`w-16 h-16 rounded-full ${mode === CAMERA_MODES.VIDEO && isRecording
+              className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full ${mode === CAMERA_MODES.VIDEO && isRecording
                 ? 'bg-red-500 hover:bg-red-600'
                 : 'bg-white hover:bg-gray-100'
                 } flex items-center justify-center shadow-2xl`}
@@ -577,68 +577,68 @@ const CameraCapture = ({
               }
             >
               {mode === CAMERA_MODES.VIDEO && isRecording ? (
-                <div className="w-6 h-6 bg-white rounded-sm" />
+                <div className="w-5 h-5 sm:w-6 sm:h-6 bg-white rounded-sm" />
               ) : (
-                <div className={`w-8 h-8 rounded-full ${mode === CAMERA_MODES.VIDEO ? 'bg-red-500' : 'bg-gray-900'
+                <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full ${mode === CAMERA_MODES.VIDEO ? 'bg-red-500' : 'bg-gray-900'
                   }`} />
               )}
             </motion.button>
           </div>
 
           {/* Right Controls */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
             <button
               onClick={toggleFullscreen}
-              className="p-3 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+              className="p-2 sm:p-3 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors hidden sm:block"
               aria-label="Toggle fullscreen"
             >
-              {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+              {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
             </button>
 
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className="p-3 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+              className="p-2 sm:p-3 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors hidden sm:block"
               aria-label="Settings"
             >
-              <Settings size={20} />
+              <Settings size={18} />
             </button>
 
             {onClose && (
               <button
                 onClick={onClose}
-                className="p-3 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+                className="p-2 sm:p-3 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
                 aria-label="Close camera"
               >
-                <XCircle size={20} />
+                <XCircle size={18} />
               </button>
             )}
           </div>
         </div>
 
-        {/* Mode Selector */}
-        <div className="flex justify-center space-x-4 mb-4">
+        {/* Mode Selector - hidden on very small screens */}
+        <div className="flex justify-center space-x-2 sm:space-x-4 mb-2 sm:mb-4">
           {Object.values(CAMERA_MODES).map((camMode) => (
             <button
               key={camMode}
               onClick={() => handleModeChange(camMode)}
-              className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 ${mode === camMode
+              className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium flex items-center space-x-1 sm:space-x-2 text-sm ${mode === camMode
                 ? 'bg-primary-500 text-white'
                 : 'bg-white/10 text-white hover:bg-white/20'
                 } transition-colors`}
             >
-              {camMode === CAMERA_MODES.VIDEO && <Video size={16} />}
-              {camMode === CAMERA_MODES.SCAN && <Scan size={16} />}
-              {camMode === CAMERA_MODES.PHOTO && <Camera size={16} />}
-              <span className="capitalize">{camMode}</span>
+              {camMode === CAMERA_MODES.VIDEO && <Video size={14} />}
+              {camMode === CAMERA_MODES.SCAN && <Scan size={14} />}
+              {camMode === CAMERA_MODES.PHOTO && <Camera size={14} />}
+              <span className="capitalize hidden sm:inline">{camMode}</span>
             </button>
           ))}
         </div>
 
-        {/* Recognition Mode */}
+        {/* Recognition Mode - compact on mobile */}
         <div className="flex justify-center">
-          <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-gray-800/50 backdrop-blur-sm">
+          <div className="inline-flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gray-800/50 backdrop-blur-sm">
             {getRecognitionModeIcon()}
-            <span className="text-sm text-white capitalize">
+            <span className="text-xs sm:text-sm text-white capitalize">
               {recognitionMode} Mode
             </span>
           </div>
