@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar,
   Camera,
@@ -13,7 +13,9 @@ import {
   MessageCircle,
   Phone,
   Send,
-  X
+  X,
+  Menu,
+  ChevronDown
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -27,6 +29,7 @@ const AttendancePage = () => {
   const [activeTab, setActiveTab] = useState('capture');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Message Parents Modal states
   const [showMessageModal, setShowMessageModal] = useState(false);
@@ -202,36 +205,85 @@ const AttendancePage = () => {
         </div>
       </motion.div>
 
-      {/* Tabs - Scrollable on mobile */}
-      <div className="flex border-b mb-4 md:mb-6 overflow-x-auto scrollbar-hide">
+      {/* Tabs - Hamburger on mobile, horizontal on desktop */}
+      {/* Mobile: Dropdown Menu */}
+      <div className="sm:hidden mb-4 relative">
+        <button
+          onClick={() => setShowMobileMenu(!showMobileMenu)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-white border rounded-xl shadow-sm"
+        >
+          <div className="flex items-center">
+            {activeTab === 'capture' && <><Camera size={18} className="mr-2 text-blue-600" /> Capture Attendance</>}
+            {activeTab === 'verification' && <><CheckCircle size={18} className="mr-2 text-blue-600" /> Verify Attendance</>}
+            {activeTab === 'history' && <><Clock size={18} className="mr-2 text-blue-600" /> History</>}
+          </div>
+          <ChevronDown size={18} className={`transition-transform ${showMobileMenu ? 'rotate-180' : ''}`} />
+        </button>
+
+        <AnimatePresence>
+          {showMobileMenu && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute z-50 w-full mt-2 bg-white border rounded-xl shadow-lg overflow-hidden"
+            >
+              <button
+                onClick={() => { setActiveTab('capture'); setShowMobileMenu(false); }}
+                className={`w-full flex items-center px-4 py-3 text-left ${activeTab === 'capture' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'}`}
+              >
+                <Camera size={18} className="mr-3" />
+                Capture Attendance
+              </button>
+              <button
+                onClick={() => { setActiveTab('verification'); setShowMobileMenu(false); }}
+                className={`w-full flex items-center px-4 py-3 text-left ${activeTab === 'verification' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'}`}
+              >
+                <CheckCircle size={18} className="mr-3" />
+                Verify Attendance
+              </button>
+              <button
+                onClick={() => { setActiveTab('history'); setShowMobileMenu(false); }}
+                className={`w-full flex items-center px-4 py-3 text-left ${activeTab === 'history' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'}`}
+              >
+                <Clock size={18} className="mr-3" />
+                History
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Desktop: Horizontal Tabs */}
+      <div className="hidden sm:flex border-b mb-6">
         <button
           onClick={() => setActiveTab('capture')}
-          className={`px-3 sm:px-6 py-2 sm:py-3 font-medium border-b-2 transition-all whitespace-nowrap text-sm sm:text-base ${activeTab === 'capture'
+          className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'capture'
             ? 'border-blue-500 text-blue-600'
             : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
-          <Camera className="inline mr-1 sm:mr-2" size={16} />
-          <span className="hidden sm:inline">Capture </span>Attendance
+          <Camera className="inline mr-2" size={18} />
+          Capture Attendance
         </button>
         <button
           onClick={() => setActiveTab('verification')}
-          className={`px-3 sm:px-6 py-2 sm:py-3 font-medium border-b-2 transition-all whitespace-nowrap text-sm sm:text-base ${activeTab === 'verification'
+          className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'verification'
             ? 'border-blue-500 text-blue-600'
             : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
-          <CheckCircle className="inline mr-1 sm:mr-2" size={16} />
-          <span className="hidden sm:inline">Verify </span>Attendance
+          <CheckCircle className="inline mr-2" size={18} />
+          Verify Attendance
         </button>
         <button
           onClick={() => setActiveTab('history')}
-          className={`px-3 sm:px-6 py-2 sm:py-3 font-medium border-b-2 transition-all whitespace-nowrap text-sm sm:text-base ${activeTab === 'history'
+          className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'history'
             ? 'border-blue-500 text-blue-600'
             : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
-          <Clock className="inline mr-1 sm:mr-2" size={16} />
+          <Clock className="inline mr-2" size={18} />
           History
         </button>
       </div>
