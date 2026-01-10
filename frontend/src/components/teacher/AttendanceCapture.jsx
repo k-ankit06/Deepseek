@@ -437,22 +437,22 @@ const AttendanceCapture = () => {
   return (
     <div className="space-y-6">
       {/* Progress Steps */}
-      <div className="flex items-center justify-center mb-8">
-        <div className="flex items-center space-x-4">
+      <div className="flex items-center justify-center mb-6 md:mb-8 overflow-x-auto">
+        <div className="flex items-center space-x-2 sm:space-x-4">
           {[
             { num: 1, label: 'Select Class' },
             { num: 2, label: 'Capture Photo' },
             { num: 3, label: 'Review & Submit' }
           ].map((s, i) => (
             <React.Fragment key={s.num}>
-              <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold ${step >= s.num ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-500'
+              <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full font-bold text-sm sm:text-base ${step >= s.num ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-500'
                 }`}>
-                {step > s.num ? <CheckCircle size={20} /> : s.num}
+                {step > s.num ? <CheckCircle size={16} /> : s.num}
               </div>
-              <span className={`text-sm font-medium ${step >= s.num ? 'text-blue-600' : 'text-gray-500'}`}>
+              <span className={`text-xs sm:text-sm font-medium hidden sm:inline ${step >= s.num ? 'text-blue-600' : 'text-gray-500'}`}>
                 {s.label}
               </span>
-              {i < 2 && <div className={`w-16 h-1 ${step > s.num ? 'bg-blue-500' : 'bg-gray-200'}`} />}
+              {i < 2 && <div className={`w-8 sm:w-16 h-1 ${step > s.num ? 'bg-blue-500' : 'bg-gray-200'}`} />}
             </React.Fragment>
           ))}
         </div>
@@ -464,25 +464,25 @@ const AttendanceCapture = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-800 flex items-center">
-                <Calendar className="mr-2" size={24} />
+          <Card className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center">
+                <Calendar className="mr-2" size={20} />
                 Select Class & Date
               </h2>
 
               {/* Network Status & Mode Toggle */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
                 {/* Network Status */}
-                <div className={`flex items-center px-3 py-1 rounded-full text-sm ${isOnline ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                <div className={`flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm ${isOnline ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}>
-                  {isOnline ? <Wifi size={16} className="mr-1" /> : <WifiOff size={16} className="mr-1" />}
+                  {isOnline ? <Wifi size={14} className="mr-1" /> : <WifiOff size={14} className="mr-1" />}
                   {isOnline ? 'Online' : 'Offline'}
                 </div>
 
                 {/* Mode Toggle */}
                 <label className="flex items-center cursor-pointer">
-                  <span className="mr-2 text-sm font-medium text-gray-700">
+                  <span className="mr-2 text-xs sm:text-sm font-medium text-gray-700 hidden sm:inline">
                     {isOfflineMode ? '📴 Offline Mode' : '🌐 Online Mode'}
                   </span>
                   <div className="relative">

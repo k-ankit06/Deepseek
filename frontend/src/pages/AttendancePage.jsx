@@ -181,57 +181,57 @@ const AttendancePage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6 md:mb-8"
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             <BackButton />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-                <Calendar className="mr-3" size={32} />
-                Attendance Management
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-3xl font-bold text-gray-800 flex items-center">
+                <Calendar className="mr-2 md:mr-3 flex-shrink-0" size={24} />
+                <span className="truncate">Attendance Management</span>
               </h1>
-              <p className="text-gray-600 mt-2">Capture, verify, and manage student attendance</p>
+              <p className="text-sm md:text-base text-gray-600 mt-1 truncate">Capture, verify, and manage student attendance</p>
             </div>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" icon={Download} onClick={() => toast.success('Exporting attendance data...')}>
-              Export
+          <div className="flex gap-2 sm:gap-3 flex-shrink-0">
+            <Button variant="outline" icon={Download} size="sm" onClick={() => toast.success('Exporting attendance data...')}>
+              <span className="hidden sm:inline">Export</span>
             </Button>
           </div>
         </div>
       </motion.div>
 
-      {/* Tabs */}
-      <div className="flex border-b mb-6">
+      {/* Tabs - Scrollable on mobile */}
+      <div className="flex border-b mb-4 md:mb-6 overflow-x-auto scrollbar-hide">
         <button
           onClick={() => setActiveTab('capture')}
-          className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'capture'
+          className={`px-3 sm:px-6 py-2 sm:py-3 font-medium border-b-2 transition-all whitespace-nowrap text-sm sm:text-base ${activeTab === 'capture'
             ? 'border-blue-500 text-blue-600'
             : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
-          <Camera className="inline mr-2" size={18} />
-          Capture Attendance
+          <Camera className="inline mr-1 sm:mr-2" size={16} />
+          <span className="hidden sm:inline">Capture </span>Attendance
         </button>
         <button
           onClick={() => setActiveTab('verification')}
-          className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'verification'
+          className={`px-3 sm:px-6 py-2 sm:py-3 font-medium border-b-2 transition-all whitespace-nowrap text-sm sm:text-base ${activeTab === 'verification'
             ? 'border-blue-500 text-blue-600'
             : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
-          <CheckCircle className="inline mr-2" size={18} />
-          Verify Attendance
+          <CheckCircle className="inline mr-1 sm:mr-2" size={16} />
+          <span className="hidden sm:inline">Verify </span>Attendance
         </button>
         <button
           onClick={() => setActiveTab('history')}
-          className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'history'
+          className={`px-3 sm:px-6 py-2 sm:py-3 font-medium border-b-2 transition-all whitespace-nowrap text-sm sm:text-base ${activeTab === 'history'
             ? 'border-blue-500 text-blue-600'
             : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
         >
-          <Clock className="inline mr-2" size={18} />
+          <Clock className="inline mr-1 sm:mr-2" size={16} />
           History
         </button>
       </div>
@@ -415,8 +415,8 @@ const AttendancePage = () => {
             <button
               onClick={() => setMessageType('whatsapp')}
               className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all ${messageType === 'whatsapp'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-green-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
               <MessageCircle size={20} />
@@ -425,8 +425,8 @@ const AttendancePage = () => {
             <button
               onClick={() => setMessageType('sms')}
               className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all ${messageType === 'sms'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
               <Phone size={20} />
