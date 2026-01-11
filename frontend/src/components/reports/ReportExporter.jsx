@@ -54,69 +54,69 @@ const ReportExporter = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Export Reports</h1>
-        <p className="text-gray-600">Generate and download attendance reports</p>
+    <div className="max-w-2xl mx-auto p-2 sm:p-4">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1 sm:mb-2">Export Reports</h1>
+        <p className="text-sm sm:text-base text-gray-600">Generate and download attendance reports</p>
       </div>
 
-      <Card className="p-6">
+      <Card className="p-4 sm:p-6">
         {/* Report Type */}
-        <div className="mb-6">
-          <h3 className="font-medium mb-3">Report Type</h3>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="mb-4 sm:mb-6">
+          <h3 className="font-medium mb-2 sm:mb-3 text-sm sm:text-base">Report Type</h3>
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {reportTypes.map(type => (
               <button
                 key={type.id}
                 onClick={() => setReportType(type.id)}
-                className={`p-4 border-2 rounded-lg text-left ${reportType === type.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                className={`p-2 sm:p-4 border-2 rounded-lg text-center sm:text-left transition-all ${reportType === type.id
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
                   }`}
               >
-                <type.icon className="mb-2" />
-                <div className="font-medium">{type.name}</div>
+                <type.icon className="mx-auto sm:mx-0 mb-1 sm:mb-2" size={20} />
+                <div className="font-medium text-xs sm:text-sm">{type.name}</div>
               </button>
             ))}
           </div>
         </div>
 
         {/* Date Selection */}
-        <div className="mb-6">
-          <label className="block font-medium mb-2">Date Range</label>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-sm mb-1">From</label>
+        <div className="mb-4 sm:mb-6">
+          <label className="block font-medium mb-2 text-sm sm:text-base">Date Range</label>
+          <div className="grid grid-cols-2 gap-2 sm:gap-4">
+            <div>
+              <label className="block text-xs sm:text-sm mb-1 text-gray-600">From</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full p-2 border rounded-lg"
+                className="w-full p-2 border rounded-lg text-sm"
               />
             </div>
-            <div className="flex-1">
-              <label className="block text-sm mb-1">To</label>
+            <div>
+              <label className="block text-xs sm:text-sm mb-1 text-gray-600">To</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full p-2 border rounded-lg"
+                className="w-full p-2 border rounded-lg text-sm"
               />
             </div>
           </div>
         </div>
 
         {/* Format Selection */}
-        <div className="mb-6">
-          <label className="block font-medium mb-3">Export Format</label>
-          <div className="flex gap-3">
+        <div className="mb-4 sm:mb-6">
+          <label className="block font-medium mb-2 sm:mb-3 text-sm sm:text-base">Export Format</label>
+          <div className="flex gap-2 sm:gap-3">
             {['pdf', 'excel', 'csv'].map(fmt => (
               <button
                 key={fmt}
                 onClick={() => setFormat(fmt)}
-                className={`px-4 py-2 border rounded-lg ${format === fmt
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'border-gray-300 hover:bg-gray-50'
+                className={`flex-1 px-3 py-2 border rounded-lg text-sm font-medium transition-all ${format === fmt
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'border-gray-300 hover:bg-gray-50'
                   }`}
               >
                 {fmt.toUpperCase()}
@@ -126,9 +126,9 @@ const ReportExporter = () => {
         </div>
 
         {/* Class Selection */}
-        <div className="mb-6">
-          <label className="block font-medium mb-2">Class (Optional)</label>
-          <select className="w-full p-2 border rounded-lg">
+        <div className="mb-4 sm:mb-6">
+          <label className="block font-medium mb-2 text-sm sm:text-base">Class (Optional)</label>
+          <select className="w-full p-2 border rounded-lg text-sm">
             <option value="">All Classes</option>
             {['Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5'].map(cls => (
               <option key={cls} value={cls}>{cls}</option>
@@ -141,19 +141,19 @@ const ReportExporter = () => {
           onClick={handleExport}
           icon={Download}
           className="w-full"
+          size="sm"
         >
-          Generate & Download Report
+          <span className="hidden sm:inline">Generate & </span>Download Report
         </Button>
       </Card>
 
       {/* Quick Export Tips */}
-      <Card className="mt-6 p-4">
-        <h3 className="font-medium mb-2">Quick Tips:</h3>
-        <ul className="text-sm text-gray-600 space-y-1">
-          <li>• Daily reports are best for individual day records</li>
+      <Card className="mt-4 sm:mt-6 p-3 sm:p-4">
+        <h3 className="font-medium mb-2 text-sm sm:text-base">Quick Tips:</h3>
+        <ul className="text-xs sm:text-sm text-gray-600 space-y-1">
+          <li>• Daily reports for individual day records</li>
           <li>• Monthly summaries show trends over time</li>
-          <li>• PDF format for printing, Excel for data analysis</li>
-          <li>• Reports include student names, dates, and status</li>
+          <li>• PDF for printing, Excel for data analysis</li>
         </ul>
       </Card>
     </div>
