@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart3,
   Download,
@@ -8,7 +8,8 @@ import {
   FileText,
   PieChart,
   TrendingUp,
-  Eye
+  Eye,
+  ChevronDown
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -17,8 +18,10 @@ import { DailyAttendance, MonthlySummary, ReportExporter, StudentHistory } from 
 import { apiMethods } from '../utils/api';
 import toast from 'react-hot-toast';
 
+
 const ReportsPage = () => {
   const [activeTab, setActiveTab] = useState('daily');
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -254,19 +257,68 @@ const ReportsPage = () => {
               />
             </div>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" icon={Filter} onClick={() => toast.success('Filters applied')}>
-              Apply Filters
+          <div className="flex gap-2 sm:gap-3">
+            <Button variant="outline" icon={Filter} size="sm" onClick={() => toast.success('Filters applied')}>
+              <span className="hidden sm:inline">Apply </span>Filters
             </Button>
-            <Button variant="primary" icon={Download} onClick={handleGenerateReport}>
-              Generate Report
+            <Button variant="primary" icon={Download} size="sm" onClick={handleGenerateReport}>
+              <span className="hidden sm:inline">Generate </span>Report
             </Button>
           </div>
         </div>
       </Card>
 
-      {/* Report Tabs */}
-      <div className="flex border-b mb-6">
+      {/* Report Tabs - Hamburger on mobile, horizontal on desktop */}
+      {/* Mobile: Dropdown Menu */}
+      <div className="sm:hidden mb-4 relative">
+        <button
+          onClick={() => setShowMobileMenu(!showMobileMenu)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-white border rounded-xl shadow-sm"
+        >
+          <div className="flex items-center">
+            {activeTab === 'daily' && <><Calendar size={18} className="mr-2 text-blue-600" /> Daily Attendance</>}
+            {activeTab === 'monthly' && <><PieChart size={18} className="mr-2 text-blue-600" /> Monthly Summary</>}
+            {activeTab === 'student' && <><FileText size={18} className="mr-2 text-blue-600" /> Student History</>}
+          </div>
+          <ChevronDown size={18} className={`transition-transform ${showMobileMenu ? 'rotate-180' : ''}`} />
+        </button>
+
+        <AnimatePresence>
+          {showMobileMenu && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute z-50 w-full mt-2 bg-white border rounded-xl shadow-lg overflow-hidden"
+            >
+              <button
+                onClick={() => { setActiveTab('daily'); setShowMobileMenu(false); }}
+                className={`w-full flex items-center px-4 py-3 text-left ${activeTab === 'daily' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'}`}
+              >
+                <Calendar size={18} className="mr-3" />
+                Daily Attendance
+              </button>
+              <button
+                onClick={() => { setActiveTab('monthly'); setShowMobileMenu(false); }}
+                className={`w-full flex items-center px-4 py-3 text-left ${activeTab === 'monthly' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'}`}
+              >
+                <PieChart size={18} className="mr-3" />
+                Monthly Summary
+              </button>
+              <button
+                onClick={() => { setActiveTab('student'); setShowMobileMenu(false); }}
+                className={`w-full flex items-center px-4 py-3 text-left ${activeTab === 'student' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'}`}
+              >
+                <FileText size={18} className="mr-3" />
+                Student History
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Desktop: Horizontal Tabs */}
+      <div className="hidden sm:flex border-b mb-6">
         <button
           onClick={() => setActiveTab('daily')}
           className={`px-6 py-3 font-medium border-b-2 transition-all ${activeTab === 'daily'
