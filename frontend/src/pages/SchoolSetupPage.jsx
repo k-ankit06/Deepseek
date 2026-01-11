@@ -235,82 +235,83 @@ const SchoolSetupPage = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-6 md:mb-8"
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 School Profile
               </h1>
-              <p className="text-gray-600 mt-2">Your school information</p>
+              <p className="text-sm md:text-base text-gray-600 mt-1">Your school information</p>
             </div>
             <Button
               onClick={() => setIsEditMode(true)}
-              className="flex items-center gap-2"
+              size="sm"
+              className="flex items-center gap-2 flex-shrink-0"
             >
-              <Save size={18} />
-              Edit Profile
+              <Save size={16} />
+              <span className="hidden sm:inline">Edit </span>Profile
             </Button>
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* School Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="lg:col-span-2"
           >
-            <Card className="p-6">
-              <div className="flex items-start gap-6">
+            <Card className="p-4 md:p-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
                 {/* Logo */}
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl flex items-center justify-center overflow-hidden">
+                <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
                   {logoPreview ? (
                     <img src={logoPreview} alt="School Logo" className="w-full h-full object-cover" />
                   ) : (
-                    <Building size={40} className="text-blue-500" />
+                    <Building size={32} className="text-blue-500" />
                   )}
                 </div>
 
                 {/* School Info */}
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-800">{schoolInfo.name || 'School Name'}</h2>
-                  <p className="text-blue-600 font-mono text-sm mt-1">Code: {schoolInfo.code}</p>
+                <div className="flex-1 min-w-0 text-center sm:text-left w-full">
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-800 truncate">{schoolInfo.name || 'School Name'}</h2>
+                  <p className="text-blue-600 font-mono text-xs md:text-sm mt-1">Code: {schoolInfo.code}</p>
 
-                  <div className="mt-4 grid grid-cols-2 gap-4">
-                    <div className="flex items-center text-gray-600">
-                      <MapPin size={16} className="mr-2 text-gray-400" />
-                      {schoolInfo.city}, {schoolInfo.state}
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-4">
+                    <div className="flex items-center text-gray-600 text-sm">
+                      <MapPin size={14} className="mr-2 text-gray-400 flex-shrink-0" />
+                      <span className="truncate">{schoolInfo.city}, {schoolInfo.state}</span>
                     </div>
-                    <div className="flex items-center text-gray-600">
-                      <Phone size={16} className="mr-2 text-gray-400" />
-                      {schoolInfo.phone || 'Not set'}
+                    <div className="flex items-center text-gray-600 text-sm">
+                      <Phone size={14} className="mr-2 text-gray-400 flex-shrink-0" />
+                      <span className="truncate">{schoolInfo.phone || 'Not set'}</span>
                     </div>
-                    <div className="flex items-center text-gray-600">
-                      <Mail size={16} className="mr-2 text-gray-400" />
-                      {schoolInfo.email || 'Not set'}
+                    <div className="flex items-center text-gray-600 text-sm">
+                      <Mail size={14} className="mr-2 text-gray-400 flex-shrink-0" />
+                      <span className="truncate">{schoolInfo.email || 'Not set'}</span>
                     </div>
-                    <div className="flex items-center text-gray-600">
-                      <User size={16} className="mr-2 text-gray-400" />
-                      {schoolInfo.principalName || 'Not set'}
+                    <div className="flex items-center text-gray-600 text-sm">
+                      <User size={14} className="mr-2 text-gray-400 flex-shrink-0" />
+                      <span className="truncate">{schoolInfo.principalName || 'Not set'}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Additional Info */}
-              <div className="mt-6 pt-6 border-t grid grid-cols-3 gap-4">
+              <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t grid grid-cols-3 gap-2 md:gap-4">
                 <div className="text-center">
-                  <p className="text-sm text-gray-500">School Type</p>
-                  <p className="font-semibold text-gray-800 capitalize">{schoolInfo.schoolType}</p>
+                  <p className="text-xs md:text-sm text-gray-500">School Type</p>
+                  <p className="font-semibold text-gray-800 capitalize text-sm md:text-base truncate">{schoolInfo.schoolType}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-gray-500">Academic Year</p>
-                  <p className="font-semibold text-gray-800">{schoolInfo.academicYear}</p>
+                  <p className="text-xs md:text-sm text-gray-500">Academic Year</p>
+                  <p className="font-semibold text-gray-800 text-sm md:text-base">{schoolInfo.academicYear}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-gray-500">Established</p>
-                  <p className="font-semibold text-gray-800">{schoolInfo.establishmentYear || 'N/A'}</p>
+                  <p className="text-xs md:text-sm text-gray-500">Established</p>
+                  <p className="font-semibold text-gray-800 text-sm md:text-base">{schoolInfo.establishmentYear || 'N/A'}</p>
                 </div>
               </div>
             </Card>
@@ -366,22 +367,23 @@ const SchoolSetupPage = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6 md:mb-8"
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-              <Building className="mr-3 text-blue-600" size={32} />
-              {schoolExists ? 'Edit School Profile' : 'School Setup'}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-3xl font-bold text-gray-800 flex items-center">
+              <Building className="mr-2 md:mr-3 text-blue-600 flex-shrink-0" size={24} />
+              <span className="truncate">{schoolExists ? 'Edit School Profile' : 'School Setup'}</span>
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-sm md:text-base text-gray-600 mt-1 truncate">
               {schoolExists ? 'Update your school information' : 'Configure your school to get started'}
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3 flex-shrink-0">
             {schoolExists && (
               <Button
                 variant="secondary"
+                size="sm"
                 onClick={() => setIsEditMode(false)}
               >
                 Cancel
@@ -389,17 +391,18 @@ const SchoolSetupPage = () => {
             )}
             <Button
               variant="primary"
+              size="sm"
               icon={isSaving ? Loader2 : Save}
               onClick={handleSave}
               disabled={isSaving}
             >
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving ? 'Saving...' : <><span className="hidden sm:inline">Save </span>Changes</>}
             </Button>
           </div>
         </div>
       </motion.div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
         {/* School Logo and Status */}
         <div className="lg:col-span-1">
           <Card className="p-6 text-center">
