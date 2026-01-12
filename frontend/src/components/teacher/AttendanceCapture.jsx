@@ -463,41 +463,62 @@ const AttendanceCapture = () => {
     setStudents(finalStudents)
 
     // Show loading toast
-    toast.loading('Sending attendance notifications to parents...', { id: 'notify-parents' })
+    toast.loading('Preparing parent notifications...', { id: 'notify-parents' })
 
     try {
-      // Prepare notification data for all students
-      const notificationData = finalStudents
-        .filter(student => student.parentPhone) // Only students with parent phone
-        .map(student => ({
-          studentId: student._id,
-          studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
-          parentPhone: student.parentPhone,
-          status: student.status,
-          className: selectedClass?.name || `Class ${selectedClass?.grade}`,
-          date: date
-        }))
+      // Prepare notification data for ALL students (server will check phone numbers)
+      const notificationData = finalStudents.map(student => ({
+        studentId: student._id,
+        studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
+        status: student.status,
+        className: selectedClass?.name || `Class ${selectedClass?.grade}`,
+        date: date
+      }))
 
-      if (notificationData.length > 0) {
-        // Call API to send notifications
-        const response = await apiMethods.sendAttendanceNotifications({
-          classId: selectedClassId,
-          className: selectedClass?.name || `Class ${selectedClass?.grade}`,
-          date: date,
-          attendanceData: notificationData
-        })
+      // Call API to prepare notifications
+      const response = await apiMethods.sendAttendanceNotifications({
+        classId: selectedClassId,
+        className: selectedClass?.name || `Class ${selectedClass?.grade}`,
+        date: date,
+        attendanceData: notificationData
+      })
 
-        if (response.success) {
-          toast.success(`✅ Attendance complete! Sent ${response.data?.sent || notificationData.length} notifications to parents.`, { id: 'notify-parents' })
+      if (response.success && response.data) {
+        const { sent, skipped, results } = response.data
+
+        if (sent > 0) {
+          // Show success with option to send via WhatsApp
+          toast.success(
+            `✅ Attendance complete! ${sent} messages ready for ${sent} parents.`,
+            { id: 'notify-parents', duration: 5000 }
+          )
+
+          // Open WhatsApp for each parent (with confirmation)
+          const successfulResults = results.filter(r => r.success && r.whatsappLink)
+          if (successfulResults.length > 0) {
+            // Ask user if they want to open WhatsApp
+            const openWhatsApp = window.confirm(
+              `Open WhatsApp to send ${successfulResults.length} message(s) to parents?\n\nClick OK to open WhatsApp for each parent.`
+            )
+
+            if (openWhatsApp) {
+              // Open each WhatsApp link with a small delay
+              successfulResults.forEach((result, index) => {
+                setTimeout(() => {
+                  window.open(result.whatsappLink, '_blank')
+                }, index * 1500) // 1.5 second delay between each
+              })
+            }
+          }
         } else {
-          toast.success('✅ Attendance marked complete! Notification sending in progress...', { id: 'notify-parents' })
+          toast.success('✅ Attendance marked complete! (No parent phone numbers found)', { id: 'notify-parents' })
         }
       } else {
-        toast.success('✅ Attendance marked complete! (No parent phone numbers found)', { id: 'notify-parents' })
+        toast.success('✅ Attendance marked complete!', { id: 'notify-parents' })
       }
     } catch (error) {
-      console.error('Failed to send notifications:', error)
-      toast.success('✅ Attendance marked complete! (Notifications may be delayed)', { id: 'notify-parents' })
+      console.error('Failed to prepare notifications:', error)
+      toast.success('✅ Attendance marked complete!', { id: 'notify-parents' })
     }
   }
 
