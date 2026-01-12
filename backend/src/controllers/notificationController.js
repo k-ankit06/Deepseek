@@ -173,7 +173,7 @@ const updateNotificationSettings = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Send attendance notifications to parents via WhatsApp
+ * @desc    Send attendance notifications to parents
  * @route   POST /api/notifications/attendance
  * @access  Private/Teacher
  */
@@ -187,69 +187,51 @@ const sendAttendanceToParents = asyncHandler(async (req, res) => {
         });
     }
 
-    // Import Student model to get parent phone numbers
-    const Student = require('../models/Student');
-
     let sent = 0;
-    let skipped = 0;
+    let failed = 0;
     const results = [];
 
     // Process each student
-    for (const studentData of attendanceData) {
-        const { studentId, studentName, status } = studentData;
+    for (const student of attendanceData) {
+        const { studentName, parentPhone, status } = student;
+
+        if (!parentPhone) {
+            continue;
+        }
 
         try {
-            // Get student from database to find parent phone
-            const student = await Student.findById(studentId);
-
-            if (!student) {
-                results.push({ studentName, success: false, error: 'Student not found' });
-                skipped++;
-                continue;
-            }
-
-            // Get parent phone number
-            const parentPhone = student.parentPhone;
-
-            if (!parentPhone) {
-                results.push({ studentName, success: false, error: 'No parent phone number' });
-                skipped++;
-                continue;
-            }
-
             // Format phone number (remove +91 or add if needed)
             let formattedPhone = parentPhone.replace(/\D/g, '');
             if (formattedPhone.length === 10) {
                 formattedPhone = '91' + formattedPhone;
             }
 
-            // Prepare WhatsApp message
+            // Create WhatsApp message
             const statusEmoji = status === 'present' ? '✅' : '❌';
             const statusText = status === 'present' ? 'PRESENT' : 'ABSENT';
-            const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-
-            const message = `${statusEmoji} *Smart Attendance Alert*\n\n` +
+            const message = encodeURIComponent(
+                `${statusEmoji} *Smart Attendance Alert*\n\n` +
                 `Dear Parent,\n\n` +
                 `Your child *${studentName}* was marked *${statusText}* today.\n\n` +
                 `📚 Class: ${className}\n` +
                 `📅 Date: ${date}\n` +
-                `⏰ Time: ${time}\n\n` +
-                `_This is an automated message from Smart Attendance System._`;
+                `⏰ Time: ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}\n\n` +
+                `_This is an automated message from Smart Attendance System._`
+            );
 
-            // Store result with WhatsApp link
+            // Store the WhatsApp link for the frontend to open
             results.push({
                 studentName,
-                parentPhone: formattedPhone,
+                phone: formattedPhone,
                 status,
-                message,
-                whatsappLink: `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`,
+                whatsappLink: `https://wa.me/${formattedPhone}?text=${message}`,
                 success: true
             });
 
             sent++;
         } catch (error) {
             console.error(`Failed to prepare notification for ${studentName}:`, error);
-            skipped++;
+            failed++;
             results.push({
                 studentName,
                 success: false,
@@ -258,15 +240,14 @@ const sendAttendanceToParents = asyncHandler(async (req, res) => {
         }
     }
 
-    console.log(`📱 WhatsApp notifications prepared: ${sent} ready, ${skipped} skipped`);
+    console.log(`📱 Attendance notifications: ${sent} prepared, ${failed} failed`);
 
     res.status(200).json({
         success: true,
         message: `Notifications prepared for ${sent} parents`,
         data: {
             sent,
-            skipped,
-            total: attendanceData.length,
+            failed,
             results
         }
     });
