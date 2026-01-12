@@ -40,7 +40,8 @@ const AttendanceCapture = () => {
   const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [capturedImage, setCapturedImage] = useState(null)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [students, setStudents] = useState([])
+  const [students, setStudents] = useState([]) // Students shown in review (recognized/present)
+  const [allStudentsForClass, setAllStudentsForClass] = useState([]) // All students in the class
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [classes, setClasses] = useState([])
@@ -181,10 +182,13 @@ const AttendanceCapture = () => {
         cacheStudentsOffline(classId, studentData)
       }
 
-      // Initialize all students as present
+      // Save ALL students for the class (for pending → absent conversion later)
+      setAllStudentsForClass(studentData)
+
+      // Initialize all students as PENDING (not yet marked)
       const studentList = studentData.map(s => ({
         ...s,
-        status: 'present',
+        status: 'pending',
         confidence: 0
       }))
       setStudents(studentList)
@@ -280,72 +284,89 @@ const AttendanceCapture = () => {
         const recognitions = result.data.recognitions || result.data.recognized || []
         const errors = result.data.errors || []
 
-        // ONLY keep students who were recognized (high confidence)
-        // Students who weren't detected won't be in the list at all
-        const recognizedStudents = students
-          .map(student => {
-            // Find if this student was recognized
-            const recognition = recognitions.find(r =>
-              r.studentId === student._id ||
-              r.studentId === student._id?.toString()
-            )
+        // Update ALL students - mark recognized as present, keep others as pending
+        const updatedStudents = allStudentsForClass.map(student => {
+          // Find if this student was recognized
+          const recognition = recognitions.find(r =>
+            r.studentId === student._id ||
+            r.studentId === student._id?.toString()
+          )
 
-            if (recognition) {
-              return {
-                ...student,
-                status: 'present',
-                confidence: recognition.confidence || recognition.confidenceScore * 100 || 0
-              }
+          if (recognition) {
+            return {
+              ...student,
+              status: 'present',
+              confidence: recognition.confidence || recognition.confidenceScore * 100 || 0
             }
-            return null // Not recognized, don't include
-          })
-          .filter(s => s !== null) // Remove unrecognized students
+          }
+          // Not recognized - keep as pending (will become absent when Complete is clicked)
+          return {
+            ...student,
+            status: 'pending',
+            confidence: 0
+          }
+        })
 
-        // Update students list with ONLY recognized students
-        setStudents(recognizedStudents)
+        // Update students list with ALL students
+        setStudents(updatedStudents)
 
         // Show results
-        const presentCount = recognizedStudents.length
-        const totalCount = students.length
+        const presentCount = updatedStudents.filter(s => s.status === 'present').length
+        const pendingCount = updatedStudents.filter(s => s.status === 'pending').length
+        const totalCount = allStudentsForClass.length
 
         if (presentCount > 0) {
-          toast.success(`✅ ${presentCount} student(s) recognized out of ${totalCount} in class`, { id: 'recognition-result' })
+          toast.success(`✅ ${presentCount} present, ${pendingCount} pending (out of ${totalCount})`, { id: 'recognition-result' })
         } else if (errors.length > 0) {
           toast.error(errors[0], { id: 'recognition-result' })
         } else {
-          toast.error('No faces recognized. Please try again with clear image.', { id: 'recognition-result' })
+          toast('No faces recognized. You can mark manually.', { icon: 'ℹ️', id: 'recognition-result' })
         }
 
         setStep(3)
       } else {
-        // AI service failed - show error
+        // AI service failed - show all students as pending
         const errorMsg = result.message || result.error || 'Face recognition failed'
         toast.error(errorMsg, { id: 'recognition-result' })
 
-        // Show empty list since no one was recognized
-        setStudents([])
+        // Show all students as pending
+        const pendingStudents = allStudentsForClass.map(s => ({
+          ...s,
+          status: 'pending',
+          confidence: 0
+        }))
+        setStudents(pendingStudents)
         setStep(3)
       }
     } catch (error) {
       console.error('Recognition error:', error)
       toast.error('Failed to process image: ' + (error.message || 'Please try again'), { id: 'recognition-result' })
 
-      // Show empty list on error
-      setStudents([])
+      // Show all students as pending on error
+      const pendingStudents = allStudentsForClass.map(s => ({
+        ...s,
+        status: 'pending',
+        confidence: 0
+      }))
+      setStudents(pendingStudents)
       setStep(3)
     } finally {
       setIsProcessing(false)
     }
   }
 
-  // Toggle student attendance status
+  // Toggle student attendance status (pending → present → absent → pending)
   const toggleStudentStatus = (studentId) => {
     setStudents(prev =>
-      prev.map(student =>
-        student._id === studentId
-          ? { ...student, status: student.status === 'present' ? 'absent' : 'present' }
-          : student
-      )
+      prev.map(student => {
+        if (student._id === studentId) {
+          const nextStatus = student.status === 'pending' ? 'present'
+            : student.status === 'present' ? 'absent'
+              : 'present' // absent → present (skip pending in manual toggle)
+          return { ...student, status: nextStatus }
+        }
+        return student
+      })
     )
   }
 
@@ -428,11 +449,22 @@ const AttendanceCapture = () => {
     setSelectedClass(null)
     setCapturedImage(null)
     setStudents([])
+    setAllStudentsForClass([])
     setImageConfirmed(false)
+  }
+
+  // Complete Attendance - converts all pending to absent
+  const completeAttendance = () => {
+    setStudents(prev => prev.map(student => ({
+      ...student,
+      status: student.status === 'pending' ? 'absent' : student.status
+    })))
+    toast.success('✅ Attendance marked complete! Pending students marked as absent.')
   }
 
   const presentCount = students.filter(s => s.status === 'present').length
   const absentCount = students.filter(s => s.status === 'absent').length
+  const pendingCount = students.filter(s => s.status === 'pending').length
 
   return (
     <div className="space-y-6">
@@ -537,13 +569,14 @@ const AttendanceCapture = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date
+                    Date <span className="text-gray-400 text-xs">(Today only)</span>
                   </label>
                   <input
                     type="date"
                     value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
+                    readOnly
+                    disabled
+                    className="w-full p-3 border rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -694,21 +727,26 @@ const AttendanceCapture = () => {
           animate={{ opacity: 1, y: 0 }}
         >
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <Card className="p-4 text-center">
-              <Users className="mx-auto text-blue-500 mb-2" size={24} />
-              <div className="text-2xl font-bold">{students.length}</div>
-              <div className="text-sm text-gray-600">Total</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <Card className="p-3 text-center">
+              <Users className="mx-auto text-blue-500 mb-1" size={20} />
+              <div className="text-xl font-bold">{students.length}</div>
+              <div className="text-xs text-gray-600">Total</div>
             </Card>
-            <Card className="p-4 text-center bg-green-50">
-              <UserCheck className="mx-auto text-green-500 mb-2" size={24} />
-              <div className="text-2xl font-bold text-green-600">{presentCount}</div>
-              <div className="text-sm text-gray-600">Present</div>
+            <Card className="p-3 text-center bg-green-50">
+              <UserCheck className="mx-auto text-green-500 mb-1" size={20} />
+              <div className="text-xl font-bold text-green-600">{presentCount}</div>
+              <div className="text-xs text-gray-600">Present</div>
             </Card>
-            <Card className="p-4 text-center bg-red-50">
-              <UserX className="mx-auto text-red-500 mb-2" size={24} />
-              <div className="text-2xl font-bold text-red-600">{absentCount}</div>
-              <div className="text-sm text-gray-600">Absent</div>
+            <Card className="p-3 text-center bg-orange-50">
+              <Clock className="mx-auto text-orange-500 mb-1" size={20} />
+              <div className="text-xl font-bold text-orange-600">{pendingCount}</div>
+              <div className="text-xs text-gray-600">Pending</div>
+            </Card>
+            <Card className="p-3 text-center bg-red-50">
+              <UserX className="mx-auto text-red-500 mb-1" size={20} />
+              <div className="text-xl font-bold text-red-600">{absentCount}</div>
+              <div className="text-xs text-gray-600">Absent</div>
             </Card>
           </div>
 
@@ -758,9 +796,11 @@ const AttendanceCapture = () => {
                   </div>
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${student.status === 'present'
                     ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
+                    : student.status === 'pending'
+                      ? 'bg-orange-100 text-orange-800'
+                      : 'bg-red-100 text-red-800'
                     }`}>
-                    {student.status === 'present' ? 'Present' : 'Absent'}
+                    {student.status === 'present' ? 'Present' : student.status === 'pending' ? 'Pending' : 'Absent'}
                   </span>
                 </div>
               ))}
@@ -768,11 +808,11 @@ const AttendanceCapture = () => {
 
             <div className="mt-6 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600">
-                💡 Click on a student to toggle between Present/Absent
+                💡 Click on a student to toggle status. Click "Complete Attendance" to mark all pending as absent.
               </p>
             </div>
 
-            <div className="mt-6 flex justify-between">
+            <div className="mt-6 flex flex-wrap gap-3 justify-between">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -782,15 +822,34 @@ const AttendanceCapture = () => {
               >
                 Back
               </Button>
-              <Button
-                variant="primary"
-                icon={isSubmitting ? Loader2 : Save}
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Submitting...' : 'Submit Attendance'}
-              </Button>
+
+              <div className="flex gap-3">
+                {pendingCount > 0 && (
+                  <Button
+                    variant="warning"
+                    icon={CheckCircle}
+                    onClick={completeAttendance}
+                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                  >
+                    Complete Attendance
+                  </Button>
+                )}
+                <Button
+                  variant="primary"
+                  icon={isSubmitting ? Loader2 : Save}
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || pendingCount > 0}
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit Attendance'}
+                </Button>
+              </div>
             </div>
+
+            {pendingCount > 0 && (
+              <p className="mt-3 text-center text-sm text-orange-600">
+                ⚠️ {pendingCount} student(s) are pending. Click "Complete Attendance" before submitting.
+              </p>
+            )}
           </Card>
         </motion.div>
       )}
