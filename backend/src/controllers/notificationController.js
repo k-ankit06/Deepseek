@@ -173,7 +173,7 @@ const updateNotificationSettings = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Send attendance notifications to parents
+ * @desc    Send attendance notifications to parents via FCM
  * @route   POST /api/notifications/attendance
  * @access  Private/Teacher
  */
@@ -187,50 +187,70 @@ const sendAttendanceToParents = asyncHandler(async (req, res) => {
         });
     }
 
+    // Import Student model to get parent FCM tokens
+    const Student = require('../models/Student');
+
     let sent = 0;
     let failed = 0;
     const results = [];
 
     // Process each student
-    for (const student of attendanceData) {
-        const { studentName, parentPhone, status } = student;
-
-        if (!parentPhone) {
-            continue;
-        }
+    for (const studentData of attendanceData) {
+        const { studentId, studentName, status } = studentData;
 
         try {
-            // Format phone number (remove +91 or add if needed)
-            let formattedPhone = parentPhone.replace(/\D/g, '');
-            if (formattedPhone.length === 10) {
-                formattedPhone = '91' + formattedPhone;
+            // Get student from database to find parent FCM token
+            const student = await Student.findById(studentId);
+
+            if (!student) {
+                results.push({ studentName, success: false, error: 'Student not found' });
+                failed++;
+                continue;
             }
 
-            // Create WhatsApp message
+            // Check if parent has FCM token registered
+            const parentToken = student.parentFcmToken;
+
+            if (!parentToken) {
+                results.push({ studentName, success: false, error: 'No FCM token registered' });
+                continue; // Skip but don't count as failed
+            }
+
+            // Prepare notification
             const statusEmoji = status === 'present' ? '✅' : '❌';
             const statusText = status === 'present' ? 'PRESENT' : 'ABSENT';
-            const message = encodeURIComponent(
-                `${statusEmoji} *Smart Attendance Alert*\n\n` +
-                `Dear Parent,\n\n` +
-                `Your child *${studentName}* was marked *${statusText}* today.\n\n` +
-                `📚 Class: ${className}\n` +
-                `📅 Date: ${date}\n` +
-                `⏰ Time: ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}\n\n` +
-                `_This is an automated message from Smart Attendance System._`
-            );
 
-            // Store the WhatsApp link for the frontend to open
-            results.push({
+            const title = `${statusEmoji} Attendance Update`;
+            const body = `${studentName} was marked ${statusText} in ${className} on ${date}`;
+
+            const data = {
+                type: 'attendance',
+                studentId: studentId,
+                studentName: studentName,
+                status: status,
+                className: className,
+                date: date,
+                time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+            };
+
+            // Send FCM notification
+            const result = await sendAttendanceNotification(parentToken, {
                 studentName,
-                phone: formattedPhone,
                 status,
-                whatsappLink: `https://wa.me/${formattedPhone}?text=${message}`,
-                success: true
+                className,
+                time: data.time,
+                date
             });
 
-            sent++;
+            if (result.success) {
+                sent++;
+                results.push({ studentName, success: true, messageId: result.messageId });
+            } else {
+                failed++;
+                results.push({ studentName, success: false, error: result.error });
+            }
         } catch (error) {
-            console.error(`Failed to prepare notification for ${studentName}:`, error);
+            console.error(`Failed to send notification for ${studentName}:`, error);
             failed++;
             results.push({
                 studentName,
@@ -240,14 +260,15 @@ const sendAttendanceToParents = asyncHandler(async (req, res) => {
         }
     }
 
-    console.log(`📱 Attendance notifications: ${sent} prepared, ${failed} failed`);
+    console.log(`📱 FCM Attendance notifications: ${sent} sent, ${failed} failed`);
 
     res.status(200).json({
         success: true,
-        message: `Notifications prepared for ${sent} parents`,
+        message: `Notifications sent to ${sent} parents`,
         data: {
             sent,
             failed,
+            total: attendanceData.length,
             results
         }
     });

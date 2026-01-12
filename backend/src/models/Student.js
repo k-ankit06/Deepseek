@@ -41,6 +41,11 @@ const studentSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  parentFcmToken: {
+    type: String,
+    trim: true,
+    // FCM token for sending push notifications to parent
+  },
   address: {
     type: String,
   },
