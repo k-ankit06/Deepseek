@@ -11,7 +11,8 @@ const {
     removeFCMToken,
     sendTestNotification,
     getNotificationSettings,
-    updateNotificationSettings
+    updateNotificationSettings,
+    sendAttendanceToParents
 } = require('../controllers/notificationController');
 
 // All routes require authentication
@@ -24,6 +25,9 @@ router.delete('/remove-token', removeFCMToken);
 // Notification settings
 router.get('/settings', getNotificationSettings);
 router.put('/settings', updateNotificationSettings);
+
+// Send attendance notifications to parents (teacher only)
+router.post('/attendance', authorize('teacher', 'admin'), sendAttendanceToParents);
 
 // Test notification (admin only)
 router.post('/test', authorize('admin'), sendTestNotification);

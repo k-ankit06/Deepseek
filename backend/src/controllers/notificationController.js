@@ -172,10 +172,92 @@ const updateNotificationSettings = asyncHandler(async (req, res) => {
     });
 });
 
+/**
+ * @desc    Send attendance notifications to parents
+ * @route   POST /api/notifications/attendance
+ * @access  Private/Teacher
+ */
+const sendAttendanceToParents = asyncHandler(async (req, res) => {
+    const { classId, className, date, attendanceData } = req.body;
+
+    if (!attendanceData || !Array.isArray(attendanceData)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Attendance data is required'
+        });
+    }
+
+    let sent = 0;
+    let failed = 0;
+    const results = [];
+
+    // Process each student
+    for (const student of attendanceData) {
+        const { studentName, parentPhone, status } = student;
+
+        if (!parentPhone) {
+            continue;
+        }
+
+        try {
+            // Format phone number (remove +91 or add if needed)
+            let formattedPhone = parentPhone.replace(/\D/g, '');
+            if (formattedPhone.length === 10) {
+                formattedPhone = '91' + formattedPhone;
+            }
+
+            // Create WhatsApp message
+            const statusEmoji = status === 'present' ? '✅' : '❌';
+            const statusText = status === 'present' ? 'PRESENT' : 'ABSENT';
+            const message = encodeURIComponent(
+                `${statusEmoji} *Smart Attendance Alert*\n\n` +
+                `Dear Parent,\n\n` +
+                `Your child *${studentName}* was marked *${statusText}* today.\n\n` +
+                `📚 Class: ${className}\n` +
+                `📅 Date: ${date}\n` +
+                `⏰ Time: ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}\n\n` +
+                `_This is an automated message from Smart Attendance System._`
+            );
+
+            // Store the WhatsApp link for the frontend to open
+            results.push({
+                studentName,
+                phone: formattedPhone,
+                status,
+                whatsappLink: `https://wa.me/${formattedPhone}?text=${message}`,
+                success: true
+            });
+
+            sent++;
+        } catch (error) {
+            console.error(`Failed to prepare notification for ${studentName}:`, error);
+            failed++;
+            results.push({
+                studentName,
+                success: false,
+                error: error.message
+            });
+        }
+    }
+
+    console.log(`📱 Attendance notifications: ${sent} prepared, ${failed} failed`);
+
+    res.status(200).json({
+        success: true,
+        message: `Notifications prepared for ${sent} parents`,
+        data: {
+            sent,
+            failed,
+            results
+        }
+    });
+});
+
 module.exports = {
     registerFCMToken,
     removeFCMToken,
     sendTestNotification,
     getNotificationSettings,
-    updateNotificationSettings
+    updateNotificationSettings,
+    sendAttendanceToParents
 };

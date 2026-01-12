@@ -126,6 +126,7 @@ export const apiMethods = {
   updateAttendance: (id, data) => api.put(`/attendance/${id}`, data),
   getStudentAttendance: (studentId) => api.get(`/attendance/student/${studentId}`),
   syncOfflineAttendance: (data) => api.post('/attendance/sync', data),
+  sendAttendanceNotifications: (data) => api.post('/notifications/attendance', data),
 
   // Reports
   generateReport: (type, params) => api.get(`/reports/${type}`, { params }),

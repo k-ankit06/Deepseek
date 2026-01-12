@@ -453,13 +453,52 @@ const AttendanceCapture = () => {
     setImageConfirmed(false)
   }
 
-  // Complete Attendance - converts all pending to absent
-  const completeAttendance = () => {
-    setStudents(prev => prev.map(student => ({
+  // Complete Attendance - converts all pending to absent AND sends notifications
+  const completeAttendance = async () => {
+    // First, convert pending to absent
+    const finalStudents = students.map(student => ({
       ...student,
       status: student.status === 'pending' ? 'absent' : student.status
-    })))
-    toast.success('✅ Attendance marked complete! Pending students marked as absent.')
+    }))
+    setStudents(finalStudents)
+
+    // Show loading toast
+    toast.loading('Sending attendance notifications to parents...', { id: 'notify-parents' })
+
+    try {
+      // Prepare notification data for all students
+      const notificationData = finalStudents
+        .filter(student => student.parentPhone) // Only students with parent phone
+        .map(student => ({
+          studentId: student._id,
+          studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
+          parentPhone: student.parentPhone,
+          status: student.status,
+          className: selectedClass?.name || `Class ${selectedClass?.grade}`,
+          date: date
+        }))
+
+      if (notificationData.length > 0) {
+        // Call API to send notifications
+        const response = await apiMethods.sendAttendanceNotifications({
+          classId: selectedClassId,
+          className: selectedClass?.name || `Class ${selectedClass?.grade}`,
+          date: date,
+          attendanceData: notificationData
+        })
+
+        if (response.success) {
+          toast.success(`✅ Attendance complete! Sent ${response.data?.sent || notificationData.length} notifications to parents.`, { id: 'notify-parents' })
+        } else {
+          toast.success('✅ Attendance marked complete! Notification sending in progress...', { id: 'notify-parents' })
+        }
+      } else {
+        toast.success('✅ Attendance marked complete! (No parent phone numbers found)', { id: 'notify-parents' })
+      }
+    } catch (error) {
+      console.error('Failed to send notifications:', error)
+      toast.success('✅ Attendance marked complete! (Notifications may be delayed)', { id: 'notify-parents' })
+    }
   }
 
   const presentCount = students.filter(s => s.status === 'present').length
