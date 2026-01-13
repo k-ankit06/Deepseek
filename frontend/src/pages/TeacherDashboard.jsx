@@ -19,6 +19,7 @@ import {
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { ShimmerDashboard } from '../components/common/Shimmer';
+import AttendanceCalendar from '../components/teacher/AttendanceCalendar';
 import { useAuth } from '../context/AuthContext';
 import { apiMethods } from '../utils/api';
 import toast from 'react-hot-toast';
@@ -32,6 +33,7 @@ const TeacherDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalClasses: 0,
@@ -92,7 +94,7 @@ const TeacherDashboard = () => {
     { title: 'Take Attendance', icon: Camera, color: 'from-blue-500 to-cyan-500', path: '/attendance' },
     { title: 'View Students', icon: Users, color: 'from-green-500 to-emerald-500', path: '/students' },
     { title: 'View Reports', icon: BarChart3, color: 'from-purple-500 to-pink-500', path: '/reports' },
-    { title: 'View Calendar', icon: Calendar, color: 'from-orange-500 to-amber-500', path: '/attendance' },
+    { title: 'View Calendar', icon: Calendar, color: 'from-orange-500 to-amber-500', action: 'calendar' },
   ];
 
   return (
@@ -201,7 +203,7 @@ const TeacherDashboard = () => {
                       whileHover={{ y: -5 }}
                       whileTap={{ scale: 0.98 }}
                       className={`bg-gradient-to-br ${action.color} rounded-2xl p-5 text-white cursor-pointer shadow-lg hover:shadow-xl transition-all`}
-                      onClick={() => navigate(action.path)}
+                      onClick={() => action.action === 'calendar' ? setShowCalendar(true) : navigate(action.path)}
                     >
                       <action.icon size={24} className="mb-3" />
                       <h3 className="font-semibold text-lg">{action.title}</h3>
@@ -319,6 +321,11 @@ const TeacherDashboard = () => {
             </Card>
           </motion.div>
         </>
+      )}
+
+      {/* Attendance Calendar Modal */}
+      {showCalendar && (
+        <AttendanceCalendar onClose={() => setShowCalendar(false)} />
       )}
     </div>
   );
