@@ -187,19 +187,43 @@ const sendAttendanceToParents = asyncHandler(async (req, res) => {
         });
     }
 
+    // Import Student model to get parent phone numbers
+    const Student = require('../models/Student');
+
     let sent = 0;
     let failed = 0;
     const results = [];
 
     // Process each student
-    for (const student of attendanceData) {
-        const { studentName, parentPhone, status } = student;
-
-        if (!parentPhone) {
-            continue;
-        }
+    for (const studentData of attendanceData) {
+        const { studentId, studentName, status } = studentData;
 
         try {
+            // Fetch student from database to get parentPhone
+            const student = await Student.findById(studentId);
+
+            if (!student) {
+                failed++;
+                results.push({
+                    studentName,
+                    success: false,
+                    error: 'Student not found'
+                });
+                continue;
+            }
+
+            const parentPhone = student.parentPhone;
+
+            if (!parentPhone) {
+                failed++;
+                results.push({
+                    studentName,
+                    success: false,
+                    error: 'No parent phone number'
+                });
+                continue;
+            }
+
             // Format phone number (remove +91 or add if needed)
             let formattedPhone = parentPhone.replace(/\D/g, '');
             if (formattedPhone.length === 10) {
@@ -209,13 +233,15 @@ const sendAttendanceToParents = asyncHandler(async (req, res) => {
             // Create WhatsApp message
             const statusEmoji = status === 'present' ? '✅' : '❌';
             const statusText = status === 'present' ? 'PRESENT' : 'ABSENT';
+            const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
             const message = encodeURIComponent(
                 `${statusEmoji} *Smart Attendance Alert*\n\n` +
                 `Dear Parent,\n\n` +
                 `Your child *${studentName}* was marked *${statusText}* today.\n\n` +
                 `📚 Class: ${className}\n` +
                 `📅 Date: ${date}\n` +
-                `⏰ Time: ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}\n\n` +
+                `⏰ Time: ${time}\n\n` +
                 `_This is an automated message from Smart Attendance System._`
             );
 
