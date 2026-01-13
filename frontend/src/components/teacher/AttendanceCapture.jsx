@@ -370,42 +370,40 @@ const AttendanceCapture = () => {
     )
   }
 
-  // Submit attendance - ONLY submit PRESENT students
+  // Submit attendance - Mark present students as PRESENT, remaining as ABSENT
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      // Get only PRESENT students
-      const presentStudents = students.filter(s => s.status === 'present')
+      // Get present students (recognized ones)
+      const presentStudentIds = students.filter(s => s.status === 'present').map(s => s._id)
 
-      if (presentStudents.length === 0) {
-        toast.error('No students marked as present!')
-        setIsSubmitting(false)
-        return
-      }
+      // Build final attendance - present stay present, rest become absent
+      const finalAttendance = allStudentsForClass.map(student => ({
+        studentId: student._id,
+        studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
+        rollNumber: student.rollNumber,
+        status: presentStudentIds.includes(student._id) ? 'present' : 'absent',
+        confidenceScore: students.find(s => s._id === student._id)?.confidence || 0
+      }))
 
-      // Prepare attendance data - ONLY present students
+      const presentCount = finalAttendance.filter(s => s.status === 'present').length
+      const absentCount = finalAttendance.filter(s => s.status === 'absent').length
+
+      // Prepare attendance payload with ALL students
       const attendancePayload = {
         classId: selectedClassId,
         className: selectedClass?.name || `Class ${selectedClass?.grade}`,
         section: selectedClass?.section,
         date: date,
         mode: isOfflineMode || !isOnline ? 'offline' : 'online',
-        attendanceData: presentStudents.map(s => ({
-          studentId: s._id,
-          studentName: `${s.firstName} ${s.lastName || ''}`.trim(),
-          rollNumber: s.rollNumber,
-          status: 'present',
-          confidenceScore: s.confidence || 0
-        })),
+        attendanceData: finalAttendance,
         timestamp: Date.now()
       }
 
       // OFFLINE MODE: Store locally
       if (isOfflineMode || !isOnline) {
         storeAttendanceOffline(attendancePayload)
-        toast.success('📴 Attendance saved offline! Will sync when online.')
-
-        // Reset form
+        toast.success(`📴 Saved offline! ${presentCount} present, ${absentCount} absent`)
         resetForm()
         return
       }
@@ -414,7 +412,7 @@ const AttendanceCapture = () => {
       const response = await apiMethods.markAttendance(attendancePayload)
 
       if (response.success) {
-        toast.success('✅ Attendance submitted successfully!')
+        toast.success(`✅ Attendance submitted! ${presentCount} present, ${absentCount} absent`)
       } else {
         // If API fails, store offline
         storeAttendanceOffline(attendancePayload)
@@ -426,29 +424,27 @@ const AttendanceCapture = () => {
     } catch (error) {
       console.error('Submit error:', error)
 
-      // On error, store ONLY present students offline
-      const presentStudents = students.filter(s => s.status === 'present')
-      if (presentStudents.length > 0) {
-        const attendancePayload = {
-          classId: selectedClassId,
-          className: selectedClass?.name || `Class ${selectedClass?.grade}`,
-          section: selectedClass?.section,
-          date: date,
-          mode: 'offline',
-          attendanceData: presentStudents.map(s => ({
-            studentId: s._id,
-            studentName: `${s.firstName} ${s.lastName || ''}`.trim(),
-            rollNumber: s.rollNumber,
-            status: 'present',
-            confidenceScore: s.confidence || 0
-          })),
-          timestamp: Date.now()
-        }
-        storeAttendanceOffline(attendancePayload)
-        toast.success('📴 Saved offline - will sync when connected')
-      } else {
-        toast.error('No students to save!')
+      // On error, try to store offline
+      const presentStudentIds = students.filter(s => s.status === 'present').map(s => s._id)
+      const finalAttendance = allStudentsForClass.map(student => ({
+        studentId: student._id,
+        studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
+        rollNumber: student.rollNumber,
+        status: presentStudentIds.includes(student._id) ? 'present' : 'absent',
+        confidenceScore: 0
+      }))
+
+      const attendancePayload = {
+        classId: selectedClassId,
+        className: selectedClass?.name || `Class ${selectedClass?.grade}`,
+        section: selectedClass?.section,
+        date: date,
+        mode: 'offline',
+        attendanceData: finalAttendance,
+        timestamp: Date.now()
       }
+      storeAttendanceOffline(attendancePayload)
+      toast.success('📴 Saved offline - will sync when connected')
 
       resetForm()
     } finally {
@@ -873,9 +869,10 @@ const AttendanceCapture = () => {
               </div>
             )}
 
-            <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
-              <p className="text-sm text-green-700">
-                ✅ Only <strong>{presentCount}</strong> recognized student(s) will be marked as present. Other students remain unmarked.
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-700">
+                📋 <strong>On Submit:</strong> {presentCount} student(s) → <span className="text-green-600 font-bold">Present</span>,
+                {' '}{allStudentsForClass.length - presentCount} student(s) → <span className="text-red-600 font-bold">Absent</span>
               </p>
             </div>
 
@@ -887,16 +884,17 @@ const AttendanceCapture = () => {
                   setCapturedImage(null)
                 }}
               >
-                Back
+                ← Add More Students
               </Button>
 
               <Button
                 variant="primary"
                 icon={isSubmitting ? Loader2 : Save}
                 onClick={handleSubmit}
-                disabled={isSubmitting || presentCount === 0}
+                disabled={isSubmitting}
+                className={presentCount === 0 ? 'bg-red-500 hover:bg-red-600' : ''}
               >
-                {isSubmitting ? 'Submitting...' : `Submit ${presentCount} Present`}
+                {isSubmitting ? 'Submitting...' : `Submit (${presentCount} Present, ${allStudentsForClass.length - presentCount} Absent)`}
               </Button>
             </div>
 
