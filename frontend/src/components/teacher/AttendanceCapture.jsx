@@ -370,22 +370,31 @@ const AttendanceCapture = () => {
     )
   }
 
-  // Submit attendance
+  // Submit attendance - ONLY submit PRESENT students
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      // Prepare attendance data
+      // Get only PRESENT students
+      const presentStudents = students.filter(s => s.status === 'present')
+
+      if (presentStudents.length === 0) {
+        toast.error('No students marked as present!')
+        setIsSubmitting(false)
+        return
+      }
+
+      // Prepare attendance data - ONLY present students
       const attendancePayload = {
         classId: selectedClassId,
         className: selectedClass?.name || `Class ${selectedClass?.grade}`,
         section: selectedClass?.section,
         date: date,
         mode: isOfflineMode || !isOnline ? 'offline' : 'online',
-        attendanceData: students.map(s => ({
+        attendanceData: presentStudents.map(s => ({
           studentId: s._id,
           studentName: `${s.firstName} ${s.lastName || ''}`.trim(),
           rollNumber: s.rollNumber,
-          status: s.status,
+          status: 'present',
           confidenceScore: s.confidence || 0
         })),
         timestamp: Date.now()
@@ -417,24 +426,29 @@ const AttendanceCapture = () => {
     } catch (error) {
       console.error('Submit error:', error)
 
-      // On error, store offline
-      const attendancePayload = {
-        classId: selectedClassId,
-        className: selectedClass?.name || `Class ${selectedClass?.grade}`,
-        section: selectedClass?.section,
-        date: date,
-        mode: 'offline',
-        attendanceData: students.map(s => ({
-          studentId: s._id,
-          studentName: `${s.firstName} ${s.lastName || ''}`.trim(),
-          rollNumber: s.rollNumber,
-          status: s.status,
-          confidenceScore: s.confidence || 0
-        })),
-        timestamp: Date.now()
+      // On error, store ONLY present students offline
+      const presentStudents = students.filter(s => s.status === 'present')
+      if (presentStudents.length > 0) {
+        const attendancePayload = {
+          classId: selectedClassId,
+          className: selectedClass?.name || `Class ${selectedClass?.grade}`,
+          section: selectedClass?.section,
+          date: date,
+          mode: 'offline',
+          attendanceData: presentStudents.map(s => ({
+            studentId: s._id,
+            studentName: `${s.firstName} ${s.lastName || ''}`.trim(),
+            rollNumber: s.rollNumber,
+            status: 'present',
+            confidenceScore: s.confidence || 0
+          })),
+          timestamp: Date.now()
+        }
+        storeAttendanceOffline(attendancePayload)
+        toast.success('📴 Saved offline - will sync when connected')
+      } else {
+        toast.error('No students to save!')
       }
-      storeAttendanceOffline(attendancePayload)
-      toast.success('📴 Saved offline - will sync when connected')
 
       resetForm()
     } finally {
@@ -809,65 +823,59 @@ const AttendanceCapture = () => {
             </Card>
           </div>
 
-          {/* Student List */}
+          {/* Student List - ONLY show PRESENT students */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-800">
-                Review Attendance
+                Recognized Students
               </h2>
               <span className="text-sm text-gray-500">
                 {selectedClass?.name || 'Class'} - {selectedClass?.section} | {date}
               </span>
             </div>
 
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {students.map((student) => (
-                <div
-                  key={student._id}
-                  className={`flex items-center justify-between p-4 rounded-lg border-2 transition-colors cursor-pointer ${student.status === 'present'
-                    ? 'border-green-200 bg-green-50'
-                    : 'border-red-200 bg-red-50'
-                    }`}
-                  onClick={() => toggleStudentStatus(student._id)}
-                >
-                  <div className="flex items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${student.status === 'present' ? 'bg-green-500' : 'bg-red-500'
-                      }`}>
-                      {student.status === 'present' ? (
+            {presentCount === 0 ? (
+              <div className="text-center py-8">
+                <UserX className="mx-auto text-gray-400 mb-3" size={40} />
+                <p className="text-gray-600 font-medium">No students recognized</p>
+                <p className="text-sm text-gray-500 mt-1">Try capturing again with better lighting</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {students.filter(s => s.status === 'present').map((student) => (
+                  <div
+                    key={student._id}
+                    className="flex items-center justify-between p-4 rounded-lg border-2 border-green-200 bg-green-50"
+                  >
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center mr-3 bg-green-500">
                         <CheckCircle className="text-white" size={20} />
-                      ) : (
-                        <XCircle className="text-white" size={20} />
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-800">
-                        {student.firstName} {student.lastName}
                       </div>
-                      <div className="text-sm text-gray-600">
-                        Roll: {student.rollNumber}
-                        {student.confidence > 0 && (
-                          <span className="ml-2 text-green-600">
-                            ({Math.round(student.confidence)}% confidence)
-                          </span>
-                        )}
+                      <div>
+                        <div className="font-medium text-gray-800">
+                          {student.firstName} {student.lastName}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Roll: {student.rollNumber}
+                          {student.confidence > 0 && (
+                            <span className="ml-2 text-green-600">
+                              ({Math.round(student.confidence)}% confidence)
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                      Present
+                    </span>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${student.status === 'present'
-                    ? 'bg-green-100 text-green-800'
-                    : student.status === 'pending'
-                      ? 'bg-orange-100 text-orange-800'
-                      : 'bg-red-100 text-red-800'
-                    }`}>
-                    {student.status === 'present' ? 'Present' : student.status === 'pending' ? 'Pending' : 'Absent'}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600">
-                💡 Click on a student to toggle status. Click "Complete Attendance" to mark all pending as absent.
+            <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+              <p className="text-sm text-green-700">
+                ✅ Only <strong>{presentCount}</strong> recognized student(s) will be marked as present. Other students remain unmarked.
               </p>
             </div>
 
@@ -882,31 +890,19 @@ const AttendanceCapture = () => {
                 Back
               </Button>
 
-              <div className="flex gap-3">
-                {pendingCount > 0 && (
-                  <Button
-                    variant="warning"
-                    icon={CheckCircle}
-                    onClick={completeAttendance}
-                    className="bg-orange-500 hover:bg-orange-600 text-white"
-                  >
-                    Complete Attendance
-                  </Button>
-                )}
-                <Button
-                  variant="primary"
-                  icon={isSubmitting ? Loader2 : Save}
-                  onClick={handleSubmit}
-                  disabled={isSubmitting || pendingCount > 0}
-                >
-                  {isSubmitting ? 'Submitting...' : 'Submit Attendance'}
-                </Button>
-              </div>
+              <Button
+                variant="primary"
+                icon={isSubmitting ? Loader2 : Save}
+                onClick={handleSubmit}
+                disabled={isSubmitting || presentCount === 0}
+              >
+                {isSubmitting ? 'Submitting...' : `Submit ${presentCount} Present`}
+              </Button>
             </div>
 
-            {pendingCount > 0 && (
+            {presentCount === 0 && (
               <p className="mt-3 text-center text-sm text-orange-600">
-                ⚠️ {pendingCount} student(s) are pending. Click "Complete Attendance" before submitting.
+                ⚠️ No students recognized. Take photo again.
               </p>
             )}
           </Card>
