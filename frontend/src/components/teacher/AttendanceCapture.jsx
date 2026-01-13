@@ -330,22 +330,27 @@ const AttendanceCapture = () => {
             toast('These students are already marked present', { icon: 'ℹ️' })
           }
 
-          // Update local state - merge with existing
-          const updatedStudents = allStudentsForClass.map(student => {
-            const existing = students.find(s => s._id === student._id)
-            if (existing?.status === 'present') return existing
-
-            const recog = recognitions.find(r => r.studentId === student._id)
-            if (recog) {
-              return { ...student, status: 'present', confidence: recog.confidence || 0 }
+          // Add ONLY newly recognized students to the list (not entire class)
+          const newlyPresentStudents = newRecognitions.map(r => {
+            const student = allStudentsForClass.find(s => s._id === r.studentId)
+            return {
+              ...student,
+              status: 'present',
+              confidence: r.confidence || r.confidenceScore * 100 || 0
             }
-            return { ...student, status: 'pending', confidence: 0 }
-          })
-          setStudents(updatedStudents)
+          }).filter(Boolean)
 
-          const presentCount = updatedStudents.filter(s => s.status === 'present').length
-          const pendingCount = updatedStudents.filter(s => s.status === 'pending').length
-          setTimeout(() => toast(`📊 ${presentCount} present, ${pendingCount} remaining`, { icon: '📋' }), 500)
+          // Merge with existing present students (no duplicates)
+          setStudents(prev => {
+            const existingIds = prev.map(s => s._id)
+            const toAdd = newlyPresentStudents.filter(s => !existingIds.includes(s._id))
+            return [...prev, ...toAdd]
+          })
+
+          // Show count
+          const totalPresent = students.length + newlyPresentStudents.length
+          const remaining = allStudentsForClass.length - totalPresent
+          setTimeout(() => toast(`📊 ${totalPresent} present, ${remaining} remaining`, { icon: '📋' }), 500)
         } else if (errors.length > 0) {
           toast.error(errors[0], { id: 'recognition-result' })
         } else {
@@ -354,17 +359,11 @@ const AttendanceCapture = () => {
         setStep(3)
       } else {
         toast.error(result.message || 'Recognition failed', { id: 'recognition-result' })
-        if (students.length === 0) {
-          setStudents(allStudentsForClass.map(s => ({ ...s, status: 'pending', confidence: 0 })))
-        }
         setStep(3)
       }
     } catch (error) {
       console.error('Error:', error)
       toast.error('Failed: ' + (error.message || 'Unknown error'), { id: 'recognition-result' })
-      if (students.length === 0) {
-        setStudents(allStudentsForClass.map(s => ({ ...s, status: 'pending', confidence: 0 })))
-      }
       setStep(3)
     } finally {
       setIsProcessing(false)
