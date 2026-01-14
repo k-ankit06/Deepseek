@@ -573,9 +573,10 @@ const AttendanceCapture = () => {
     }
   }
 
-  const presentCount = students.filter(s => s.status === 'present').length
-  const absentCount = students.filter(s => s.status === 'absent').length
-  const pendingCount = students.filter(s => s.status === 'pending').length
+  // Stats: students array now contains ONLY present students
+  const presentCount = students.length
+  const absentCount = 0 // Will be set on final submit
+  const pendingCount = allStudentsForClass.length - students.length
 
   return (
     <div className="space-y-6">
@@ -841,7 +842,7 @@ const AttendanceCapture = () => {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <Card className="p-3 text-center">
               <Users className="mx-auto text-blue-500 mb-1" size={20} />
-              <div className="text-xl font-bold">{students.length}</div>
+              <div className="text-xl font-bold">{allStudentsForClass.length}</div>
               <div className="text-xs text-gray-600">Total</div>
             </Card>
             <Card className="p-3 text-center bg-green-50">
