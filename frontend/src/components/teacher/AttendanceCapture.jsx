@@ -284,12 +284,39 @@ const AttendanceCapture = () => {
         const recognitions = result.data.recognitions || result.data.recognized || []
         const errors = result.data.errors || []
 
+        console.log('🔍 Recognition result:', { recognitions, errors, allStudentsForClass })
+
         if (recognitions.length > 0) {
           // Get already present student IDs from current state
-          const alreadyPresentIds = students.filter(s => s.status === 'present').map(s => s._id)
+          const alreadyPresentIds = students.map(s => s._id?.toString())
 
-          // Filter to only truly new recognitions
-          const newRecognitions = recognitions.filter(r => !alreadyPresentIds.includes(r.studentId))
+          // Filter to only truly new recognitions (handle both string and object IDs)
+          const newRecognitions = recognitions.filter(r => {
+            const recogId = r.studentId?.toString() || r.studentId
+            return !alreadyPresentIds.includes(recogId)
+          })
+
+          console.log('🆕 New recognitions:', newRecognitions)
+
+          // Build newly present students list from ALL recognitions (including already present)
+          const newlyPresentStudents = recognitions.map(r => {
+            const recogId = r.studentId?.toString() || r.studentId
+            const student = allStudentsForClass.find(s =>
+              s._id === recogId || s._id?.toString() === recogId
+            )
+
+            console.log('👤 Matching student:', { recogId, found: !!student, student })
+
+            if (!student) return null
+
+            return {
+              ...student,
+              status: 'present',
+              confidence: r.confidence || r.confidenceScore * 100 || 0
+            }
+          }).filter(Boolean)
+
+          console.log('✅ Present students to add:', newlyPresentStudents)
 
           if (newRecognitions.length > 0) {
             // IMMEDIATELY save newly recognized students
@@ -303,7 +330,10 @@ const AttendanceCapture = () => {
                 date: date,
                 mode: 'single',
                 attendanceData: newRecognitions.map(r => {
-                  const student = allStudentsForClass.find(s => s._id === r.studentId)
+                  const recogId = r.studentId?.toString() || r.studentId
+                  const student = allStudentsForClass.find(s =>
+                    s._id === recogId || s._id?.toString() === recogId
+                  )
                   return {
                     studentId: r.studentId,
                     studentName: student ? `${student.firstName} ${student.lastName || ''}`.trim() : 'Unknown',
@@ -326,29 +356,24 @@ const AttendanceCapture = () => {
               console.error('Save error:', e)
               toast.error('Failed to save', { id: 'save-now' })
             }
-          } else {
+          } else if (newlyPresentStudents.length > 0) {
             toast('These students are already marked present', { icon: 'ℹ️' })
           }
 
-          // Add ONLY newly recognized students to the list (not entire class)
-          const newlyPresentStudents = newRecognitions.map(r => {
-            const student = allStudentsForClass.find(s => s._id === r.studentId)
-            return {
-              ...student,
-              status: 'present',
-              confidence: r.confidence || r.confidenceScore * 100 || 0
-            }
-          }).filter(Boolean)
-
-          // Merge with existing present students (no duplicates)
-          setStudents(prev => {
-            const existingIds = prev.map(s => s._id)
-            const toAdd = newlyPresentStudents.filter(s => !existingIds.includes(s._id))
-            return [...prev, ...toAdd]
-          })
+          // Add recognized students to the list (merge, no duplicates)
+          if (newlyPresentStudents.length > 0) {
+            setStudents(prev => {
+              const existingIds = prev.map(s => s._id?.toString())
+              const toAdd = newlyPresentStudents.filter(s => !existingIds.includes(s._id?.toString()))
+              console.log('📝 Adding to list:', toAdd)
+              return [...prev, ...toAdd]
+            })
+          }
 
           // Show count
-          const totalPresent = students.length + newlyPresentStudents.length
+          const totalPresent = students.length + newlyPresentStudents.filter(s =>
+            !students.some(existing => existing._id?.toString() === s._id?.toString())
+          ).length
           const remaining = allStudentsForClass.length - totalPresent
           setTimeout(() => toast(`📊 ${totalPresent} present, ${remaining} remaining`, { icon: '📋' }), 500)
         } else if (errors.length > 0) {
