@@ -53,5 +53,6 @@ router.get('/monthly', validate(monthlyAttendanceValidation), attendanceControll
 router.get('/student/:studentId', attendanceController.getStudentAttendanceHistory);
 router.put('/:id', authorize('teacher', 'admin'), validate(updateAttendanceValidation), attendanceController.updateAttendance);
 router.post('/sync', attendanceController.syncOfflineAttendance);
+router.delete('/clear/:classId', authorize('teacher', 'admin'), attendanceController.deleteTodayAttendance);
 
 module.exports = router;

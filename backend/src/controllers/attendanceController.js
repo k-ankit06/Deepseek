@@ -831,6 +831,51 @@ const syncOfflineAttendance = async (req, res) => {
   }
 };
 
+// @desc    Delete today's attendance for a class (for testing)
+// @route   DELETE /api/attendance/clear/:classId
+// @access  Private/Teacher
+const deleteTodayAttendance = async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const { date } = req.query;
+
+    // Parse date
+    let targetDate;
+    if (date) {
+      const dateParts = date.split('-');
+      if (dateParts.length === 3) {
+        targetDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+      } else {
+        targetDate = new Date(date);
+      }
+    } else {
+      targetDate = new Date();
+    }
+    targetDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(targetDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    // Delete attendance records for this class and date
+    const result = await Attendance.deleteMany({
+      class: classId,
+      date: { $gte: targetDate, $lte: endDate }
+    });
+
+    res.json({
+      success: true,
+      message: `Deleted ${result.deletedCount} attendance records`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Delete attendance error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   markAttendance,
   getClassAttendance,
@@ -840,4 +885,5 @@ module.exports = {
   getAttendanceSummary,
   markAttendanceHelper,
   syncOfflineAttendance,
+  deleteTodayAttendance,
 };
