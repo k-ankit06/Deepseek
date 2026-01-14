@@ -284,13 +284,73 @@ const AttendanceCapture = () => {
         const recognitions = result.data.recognitions || result.data.recognized || []
         const errors = result.data.errors || []
 
-        // Update ALL students - mark recognized as present, keep others as pending
+        // Get current present students (already saved)
+        const alreadyPresentIds = students
+          .filter(s => s.status === 'present')
+          .map(s => s._id?.toString())
+
+        // Find NEWLY recognized students (not already present)
+        const newlyRecognized = recognitions.filter(r => {
+          const recogId = r.studentId?.toString() || r.studentId
+          return !alreadyPresentIds.includes(recogId)
+        })
+
+        // SAVE ONLY newly recognized students IMMEDIATELY
+        if (newlyRecognized.length > 0) {
+          toast.loading(`Saving ${newlyRecognized.length} student(s)...`, { id: 'save-present' })
+
+          try {
+            const savePayload = {
+              classId: selectedClassId,
+              className: selectedClass?.name || `Class ${selectedClass?.grade}`,
+              section: selectedClass?.section,
+              date: date,
+              mode: 'single',
+              attendanceData: newlyRecognized.map(r => {
+                const recogId = r.studentId?.toString() || r.studentId
+                const student = allStudentsForClass.find(s =>
+                  s._id === recogId || s._id?.toString() === recogId
+                )
+                return {
+                  studentId: r.studentId,
+                  studentName: student ? `${student.firstName} ${student.lastName || ''}`.trim() : 'Unknown',
+                  rollNumber: student?.rollNumber || '',
+                  status: 'present',
+                  confidenceScore: r.confidence || r.confidenceScore * 100 || 0
+                }
+              }),
+              timestamp: Date.now()
+            }
+
+            const saveResult = await apiMethods.markAttendance(savePayload)
+
+            if (saveResult.success) {
+              toast.success(`✅ ${newlyRecognized.length} student(s) marked PRESENT!`, { id: 'save-present' })
+            } else {
+              toast.error('Failed to save attendance', { id: 'save-present' })
+            }
+          } catch (saveErr) {
+            console.error('Save error:', saveErr)
+            toast.error('Failed to save', { id: 'save-present' })
+          }
+        }
+
+        // Update local state - mark recognized as present, keep others as pending
         const updatedStudents = allStudentsForClass.map(student => {
-          // Find if this student was recognized
-          const recognition = recognitions.find(r =>
-            r.studentId === student._id ||
-            r.studentId === student._id?.toString()
-          )
+          const studentIdStr = student._id?.toString()
+
+          // Check if already marked present before
+          const wasAlreadyPresent = alreadyPresentIds.includes(studentIdStr)
+          if (wasAlreadyPresent) {
+            const existing = students.find(s => s._id?.toString() === studentIdStr)
+            return existing || { ...student, status: 'present', confidence: 0 }
+          }
+
+          // Check if newly recognized
+          const recognition = recognitions.find(r => {
+            const recogId = r.studentId?.toString() || r.studentId
+            return recogId === studentIdStr || recogId === student._id
+          })
 
           if (recognition) {
             return {
@@ -299,56 +359,47 @@ const AttendanceCapture = () => {
               confidence: recognition.confidence || recognition.confidenceScore * 100 || 0
             }
           }
-          // Not recognized - keep as pending (will become absent when Complete is clicked)
-          return {
-            ...student,
-            status: 'pending',
-            confidence: 0
-          }
+
+          // Not recognized - keep as pending
+          return { ...student, status: 'pending', confidence: 0 }
         })
 
-        // Update students list with ALL students
         setStudents(updatedStudents)
 
         // Show results
         const presentCount = updatedStudents.filter(s => s.status === 'present').length
         const pendingCount = updatedStudents.filter(s => s.status === 'pending').length
-        const totalCount = allStudentsForClass.length
 
-        if (presentCount > 0) {
-          toast.success(`✅ ${presentCount} present, ${pendingCount} pending (out of ${totalCount})`, { id: 'recognition-result' })
+        if (newlyRecognized.length > 0) {
+          toast.success(`📊 ${presentCount} present, ${pendingCount} pending`, { id: 'count-update' })
+        } else if (recognitions.length > 0) {
+          toast('These students are already marked present', { icon: 'ℹ️' })
         } else if (errors.length > 0) {
           toast.error(errors[0], { id: 'recognition-result' })
         } else {
-          toast('No faces recognized. You can mark manually.', { icon: 'ℹ️', id: 'recognition-result' })
+          toast('No faces recognized. Try again.', { icon: 'ℹ️', id: 'recognition-result' })
         }
 
         setStep(3)
       } else {
-        // AI service failed - show all students as pending
+        // AI service failed
         const errorMsg = result.message || result.error || 'Face recognition failed'
         toast.error(errorMsg, { id: 'recognition-result' })
 
-        // Show all students as pending
-        const pendingStudents = allStudentsForClass.map(s => ({
-          ...s,
-          status: 'pending',
-          confidence: 0
-        }))
-        setStudents(pendingStudents)
+        // Keep existing state or init as pending
+        if (students.length === 0) {
+          setStudents(allStudentsForClass.map(s => ({ ...s, status: 'pending', confidence: 0 })))
+        }
         setStep(3)
       }
     } catch (error) {
       console.error('Recognition error:', error)
       toast.error('Failed to process image: ' + (error.message || 'Please try again'), { id: 'recognition-result' })
 
-      // Show all students as pending on error
-      const pendingStudents = allStudentsForClass.map(s => ({
-        ...s,
-        status: 'pending',
-        confidence: 0
-      }))
-      setStudents(pendingStudents)
+      // Keep existing state or init as pending
+      if (students.length === 0) {
+        setStudents(allStudentsForClass.map(s => ({ ...s, status: 'pending', confidence: 0 })))
+      }
       setStep(3)
     } finally {
       setIsProcessing(false)
@@ -370,53 +421,58 @@ const AttendanceCapture = () => {
     )
   }
 
-  // Submit attendance - Mark present students as PRESENT, remaining as ABSENT
+  // Final Submit - Mark PENDING students as ABSENT (present ones already saved)
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      // Get present students (recognized ones)
-      const presentStudentIds = students.filter(s => s.status === 'present').map(s => s._id)
+      // Get pending students (not yet saved)
+      const pendingStudents = students.filter(s => s.status === 'pending')
+      const presentCount = students.filter(s => s.status === 'present').length
+      const absentCount = pendingStudents.length
 
-      // Build final attendance - present stay present, rest become absent
-      const finalAttendance = allStudentsForClass.map(student => ({
-        studentId: student._id,
-        studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
-        rollNumber: student.rollNumber,
-        status: presentStudentIds.includes(student._id) ? 'present' : 'absent',
-        confidenceScore: students.find(s => s._id === student._id)?.confidence || 0
-      }))
-
-      const presentCount = finalAttendance.filter(s => s.status === 'present').length
-      const absentCount = finalAttendance.filter(s => s.status === 'absent').length
-
-      // Prepare attendance payload with ALL students
-      const attendancePayload = {
-        classId: selectedClassId,
-        className: selectedClass?.name || `Class ${selectedClass?.grade}`,
-        section: selectedClass?.section,
-        date: date,
-        mode: isOfflineMode || !isOnline ? 'offline' : 'online',
-        attendanceData: finalAttendance,
-        timestamp: Date.now()
-      }
-
-      // OFFLINE MODE: Store locally
-      if (isOfflineMode || !isOnline) {
-        storeAttendanceOffline(attendancePayload)
-        toast.success(`📴 Saved offline! ${presentCount} present, ${absentCount} absent`)
+      if (pendingStudents.length === 0 && presentCount === allStudentsForClass.length) {
+        toast.success('✅ All students are present! Attendance complete.')
         resetForm()
         return
       }
 
-      // ONLINE MODE: Send to server
-      const response = await apiMethods.markAttendance(attendancePayload)
+      // Mark pending students as ABSENT
+      if (pendingStudents.length > 0) {
+        const absentPayload = {
+          classId: selectedClassId,
+          className: selectedClass?.name || `Class ${selectedClass?.grade}`,
+          section: selectedClass?.section,
+          date: date,
+          mode: isOfflineMode || !isOnline ? 'offline' : 'online',
+          attendanceData: pendingStudents.map(student => ({
+            studentId: student._id,
+            studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
+            rollNumber: student.rollNumber,
+            status: 'absent',
+            confidenceScore: 0
+          })),
+          timestamp: Date.now()
+        }
 
-      if (response.success) {
-        toast.success(`✅ Attendance submitted! ${presentCount} present, ${absentCount} absent`)
+        // OFFLINE MODE: Store locally
+        if (isOfflineMode || !isOnline) {
+          storeAttendanceOffline(absentPayload)
+          toast.success(`📴 Saved! ${presentCount} present, ${absentCount} absent`)
+          resetForm()
+          return
+        }
+
+        // ONLINE MODE: Send absent students to server
+        const response = await apiMethods.markAttendance(absentPayload)
+
+        if (response.success) {
+          toast.success(`✅ Attendance complete! ${presentCount} present, ${absentCount} absent`)
+        } else {
+          storeAttendanceOffline(absentPayload)
+          toast.success('📴 Saved offline - will sync later')
+        }
       } else {
-        // If API fails, store offline
-        storeAttendanceOffline(attendancePayload)
-        toast.success('📴 Saved offline - will sync later')
+        toast.success(`✅ Attendance complete! ${presentCount} present`)
       }
 
       // Reset form
@@ -424,27 +480,27 @@ const AttendanceCapture = () => {
     } catch (error) {
       console.error('Submit error:', error)
 
-      // On error, try to store offline
-      const presentStudentIds = students.filter(s => s.status === 'present').map(s => s._id)
-      const finalAttendance = allStudentsForClass.map(student => ({
-        studentId: student._id,
-        studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
-        rollNumber: student.rollNumber,
-        status: presentStudentIds.includes(student._id) ? 'present' : 'absent',
-        confidenceScore: 0
-      }))
-
-      const attendancePayload = {
-        classId: selectedClassId,
-        className: selectedClass?.name || `Class ${selectedClass?.grade}`,
-        section: selectedClass?.section,
-        date: date,
-        mode: 'offline',
-        attendanceData: finalAttendance,
-        timestamp: Date.now()
+      // On error, try to store pending as absent offline
+      const pendingStudents = students.filter(s => s.status === 'pending')
+      if (pendingStudents.length > 0) {
+        const absentPayload = {
+          classId: selectedClassId,
+          className: selectedClass?.name || `Class ${selectedClass?.grade}`,
+          section: selectedClass?.section,
+          date: date,
+          mode: 'offline',
+          attendanceData: pendingStudents.map(student => ({
+            studentId: student._id,
+            studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
+            rollNumber: student.rollNumber,
+            status: 'absent',
+            confidenceScore: 0
+          })),
+          timestamp: Date.now()
+        }
+        storeAttendanceOffline(absentPayload)
+        toast.success('📴 Saved offline - will sync when connected')
       }
-      storeAttendanceOffline(attendancePayload)
-      toast.success('📴 Saved offline - will sync when connected')
 
       resetForm()
     } finally {
