@@ -58,31 +58,44 @@ const AttendanceVerification = () => {
     }
     fetchClasses()
   }, [])
+const loadAttendance = async () => {
+  setIsLoading(true)
+  try {
+    const response = await apiMethods.getDailyAttendance({ date: selectedDate })
 
-  // Load attendance records from API
-  const loadAttendance = async () => {
-    setIsLoading(true)
-    try {
-      const response = await apiMethods.getDailyAttendance({ date: selectedDate })
-
-      if (response.success && response.data && response.data.length > 0) {
-        // Deduplicate records - keep only latest record per student
-        const deduplicatedMap = new Map()
+    if (response.success && response.data && response.data.length > 0) {
+      // Deduplicate records - keep only latest record per student
+      const deduplicatedMap = new Map()
+      
+      response.data.forEach((att) => {
+        // FIXED: Better student ID extraction with fallback
+        const studentId = att.student?._id || att.studentId || att.student
         
-        response.data.forEach((att) => {
-          const studentId = att.student?._id || att.student
-          const existingRecord = deduplicatedMap.get(studentId)
-          
-          // Keep the most recently updated record for each student
-          if (!existingRecord || new Date(att.markedAt || att.createdAt) > new Date(existingRecord.markedAt || existingRecord.createdAt)) {
-            deduplicatedMap.set(studentId, att)
-          }
-        })
+        // FIXED: Skip records without valid student ID
+        if (!studentId) {
+          console.warn('Skipping attendance record without student ID:', att)
+          return
+        }
+        
+        const existingRecord = deduplicatedMap.get(studentId)
+        
+        // Keep the most recently updated record for each student
+        if (!existingRecord || 
+            new Date(att.markedAt || att.updatedAt || att.createdAt) > 
+            new Date(existingRecord.markedAt || existingRecord.updatedAt || existingRecord.createdAt)) {
+          deduplicatedMap.set(studentId, att)
+        }
+      })
 
-        const records = Array.from(deduplicatedMap.values()).map((att, i) => ({
-          id: att._id || `ATT${1000 + i}`,
-          studentId: att.student?._id || att.student,
-          studentName: att.student?.firstName ? `${att.student.firstName} ${att.student.lastName || ''}` : 'Unknown',
+      // FIXED: Better error handling and data validation
+      const records = Array.from(deduplicatedMap.values())
+        .filter(att => att.student?._id || att.studentId) // Only include valid records
+        .map((att, i) => ({
+          id: att._id || `ATT${Date.now()}-${i}`, // Better unique ID
+          studentId: att.student?._id || att.studentId || att.student,
+          studentName: att.student?.firstName 
+            ? `${att.student.firstName} ${att.student.lastName || ''}`.trim()
+            : att.student?.name || 'Unknown',
           rollNumber: att.student?.rollNumber || i + 1,
           className: att.class?.name || selectedClass || 'Unknown',
           section: att.section || 'A',
@@ -96,26 +109,26 @@ const AttendanceVerification = () => {
           syncStatus: 'synced'
         }))
 
-        setAttendanceRecords(records)
-        setFilteredRecords(records)
-        toast.success(`Loaded ${records.length} attendance records`, { id: 'load-attendance' })
-      } else {
-        // No records found - show empty state
-        setAttendanceRecords([])
-        setFilteredRecords([])
-        toast('No attendance records found for this date', { id: 'load-attendance' })
-      }
-    } catch (error) {
-      console.error('Error loading attendance:', error)
-      // Show empty state on error
+      console.log('✅ Loaded attendance records:', records.length)
+      console.log('Student IDs:', records.map(r => r.studentId))
+      
+      setAttendanceRecords(records)
+      setFilteredRecords(records)
+      toast.success(`Loaded ${records.length} attendance records`, { id: 'load-attendance' })
+    } else {
       setAttendanceRecords([])
       setFilteredRecords([])
-      toast.error('Failed to load attendance records', { id: 'load-attendance' })
-    } finally {
-      setIsLoading(false)
+      toast('No attendance records found for this date', { id: 'load-attendance' })
     }
+  } catch (error) {
+    console.error('❌ Error loading attendance:', error)
+    setAttendanceRecords([])
+    setFilteredRecords([])
+    toast.error('Failed to load attendance records', { id: 'load-attendance' })
+  } finally {
+    setIsLoading(false)
   }
-
+}
   // Apply filters
   useEffect(() => {
     let filtered = attendanceRecords
