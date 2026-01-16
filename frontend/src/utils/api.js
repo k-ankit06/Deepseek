@@ -34,8 +34,12 @@ api.interceptors.request.use(
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
-    // Handle success messages from server - use ID to prevent duplicates
-    if (response.data?.message) {
+    // Handle success messages from server - SKIP for attendance endpoints
+    // (attendance pages show their own specific toasts)
+    const url = response.config?.url || ''
+    const isAttendanceEndpoint = url.includes('/attendance')
+
+    if (response.data?.message && !isAttendanceEndpoint) {
       toast.success(response.data.message, { id: 'api-success' })
     }
     return response.data
