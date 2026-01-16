@@ -16,6 +16,23 @@ const markAttendance = async (req, res) => {
     const markedBy = req.user?._id;
     const schoolId = req.user?.school;
 
+    console.log('\n═══════════════════════════════════════════════════');
+    console.log('📝 ATTENDANCE SUBMISSION RECEIVED');
+    console.log('═══════════════════════════════════════════════════');
+    console.log('Class ID:', classId);
+    console.log('Date:', date);
+    console.log('Mode:', mode);
+    console.log('Total students in data:', attendanceData?.length);
+    
+    if (attendanceData && attendanceData.length > 0) {
+      console.log('Student IDs being submitted:', attendanceData.map(a => ({ 
+        id: a.studentId, 
+        type: typeof a.studentId,
+        name: a.studentName, 
+        status: a.status 
+      })));
+    }
+
     if (!attendanceData || !Array.isArray(attendanceData)) {
       return res.status(400).json({
         success: false,
@@ -32,6 +49,20 @@ const markAttendance = async (req, res) => {
         message: 'Class not found',
       });
     }
+
+    console.log('\n📚 Class Info:', {
+      classId,
+      className: studentClass.name,
+      section: studentClass.section
+    });
+
+    // DEBUG: Log all students in this class
+    const allClassStudents = await Student.find({ class: classId }).select('_id firstName lastName rollNumber');
+    console.log('📖 All students in class:', allClassStudents.map(s => ({
+      id: s._id.toString(),
+      name: `${s.firstName} ${s.lastName}`,
+      roll: s.rollNumber
+    })));
 
     // Use class school if user school not available
     const effectiveSchoolId = schoolId || studentClass.school;
@@ -62,23 +93,94 @@ const markAttendance = async (req, res) => {
       try {
         const { studentId, status, checkInTime, remarks, confidenceScore } = item;
 
-        console.log(`Processing student: ${item.studentName} (ID: ${studentId}, Status: ${status})`);
+        console.log(`\n[${attendanceData.indexOf(item) + 1}/${attendanceData.length}] Processing: ${item.studentName} (ID: ${studentId}, Status: ${status})`);
 
-        // Verify student - less strict, just check if exists
-        const student = await Student.findById(studentId);
-
-        if (!student) {
-          console.warn(`❌ Student not found with ID: ${studentId}`);
+        // Validate studentId exists
+        if (!studentId) {
+          console.error('❌ No studentId provided for:', item.studentName);
           results.failed++;
           results.details.push({
-            studentId,
+            studentId: null,
             status: 'failed',
-            reason: 'Student not found',
+            reason: 'No student ID provided',
           });
           continue;
         }
 
-        console.log(`✅ Student found: ${student.firstName} ${student.lastName}`);
+        // Convert to string if it's an object
+        let studentIdStr = studentId;
+        if (typeof studentId === 'object') {
+          studentIdStr = studentId.toString();
+          console.log('  📝 Converted ObjectId to string:', studentIdStr);
+        } else {
+          studentIdStr = String(studentId);
+        }
+
+        console.log('  🔍 Looking up student with ID:', studentIdStr, '(type:', typeof studentIdStr + ')');
+
+        // Try to verify student
+        let student;
+        try {
+          // First try: Direct findById
+          console.log('  → Attempt 1: Student.findById()');
+          student = await Student.findById(studentIdStr);
+          
+          if (student) {
+            console.log('  ✅ Found via findById!');
+          } else {
+            console.log('  ❌ Not found via findById, trying findOne...');
+            
+            // Second try: findOne with _id
+            console.log('  → Attempt 2: Student.findOne({ _id })');
+            student = await Student.findOne({ _id: studentIdStr });
+            
+            if (student) {
+              console.log('  ✅ Found via findOne!');
+            } else {
+              console.log('  ❌ Not found via findOne either');
+              
+              // Third try: Maybe it's just a string ID that needs conversion
+              if (mongoose.Types.ObjectId.isValid(studentIdStr)) {
+                console.log('  → Attempt 3: Testing with direct ObjectId conversion');
+                try {
+                  const objId = new mongoose.Types.ObjectId(studentIdStr);
+                  student = await Student.findOne({ _id: objId });
+                  if (student) {
+                    console.log('  ✅ Found via ObjectId conversion!');
+                  }
+                } catch (e) {
+                  console.log('  ❌ ObjectId conversion failed:', e.message);
+                }
+              } else {
+                console.log('  ❌ Invalid ObjectId format:', studentIdStr);
+              }
+            }
+          }
+        } catch (findError) {
+          console.error(`  ❌ Error looking up student:`, findError.message);
+          results.failed++;
+          results.details.push({
+            studentId: studentIdStr,
+            status: 'failed',
+            reason: 'Database lookup error: ' + findError.message,
+          });
+          continue;
+        }
+
+        if (!student) {
+          console.error(`  ❌ FINAL: Student still not found with ID: ${studentIdStr}`);
+          console.error('  💾 Available students in class:', allClassStudents.map(s => s._id.toString()));
+          
+          results.failed++;
+          results.details.push({
+            studentId: studentIdStr,
+            status: 'failed',
+            reason: 'Student not found in database',
+          });
+          continue;
+        }
+
+        console.log(`  ✅ SUCCESS: Student found: ${student.firstName} ${student.lastName}`);
 
         // Parse date for range query to avoid timezone issues
         const startOfDay = new Date(attendanceDate);
@@ -88,7 +190,7 @@ const markAttendance = async (req, res) => {
 
         // Check if attendance already marked for today using date range
         const existingAttendance = await Attendance.findOne({
-          student: studentId,
+          student: studentIdStr, // Use converted string ID
           date: { $gte: startOfDay, $lte: endOfDay },
         });
 
@@ -108,7 +210,7 @@ const markAttendance = async (req, res) => {
           // Create new attendance record
           console.log(`  ✨ Creating new attendance for ${student.firstName}`);
           await Attendance.create({
-            student: studentId,
+            student: studentIdStr, // Use converted string ID
             class: classId,
             school: effectiveSchoolId,
             date: attendanceDate,
@@ -123,11 +225,11 @@ const markAttendance = async (req, res) => {
         }
 
         // Update student attendance stats
-        await updateStudentAttendanceStats(studentId);
+        await updateStudentAttendanceStats(studentIdStr); // Use converted string ID
 
         results.success++;
         results.details.push({
-          studentId,
+          studentId: studentIdStr,
           studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
           rollNumber: student.rollNumber,
           status: 'success',
