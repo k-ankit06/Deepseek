@@ -185,11 +185,30 @@ const markAttendance = async (req, res) => {
         // Get date string for lookup
         const dateStr = date || new Date().toISOString().split('T')[0];
 
-        // Check if attendance already marked for today using dateString
-        const existingAttendance = await Attendance.findOne({
+        // Create date range for fallback lookup
+        const startOfDay = new Date(attendanceDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(attendanceDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Check for existing attendance - try dateString first, then date range for old records
+        let existingAttendance = await Attendance.findOne({
           student: studentIdStr,
           dateString: dateStr,
         });
+
+        // Fallback: check for old records without dateString (using date range)
+        if (!existingAttendance) {
+          existingAttendance = await Attendance.findOne({
+            student: studentIdStr,
+            dateString: { $in: [null, undefined] },
+            date: { $gte: startOfDay, $lte: endOfDay },
+          });
+
+          if (existingAttendance) {
+            console.log(`  📝 Found OLD record without dateString, will update it`);
+          }
+        }
 
         if (existingAttendance) {
           // Update existing attendance
@@ -201,13 +220,12 @@ const markAttendance = async (req, res) => {
           existingAttendance.confidenceScore = confidenceScore;
           existingAttendance.checkInTime = checkInTime ? new Date(checkInTime) : undefined;
           existingAttendance.remarks = remarks;
+          existingAttendance.dateString = dateStr; // Update old records with dateString!
 
           await existingAttendance.save();
         } else {
           // Create new attendance record
           console.log(`  ✨ Creating new attendance for ${student.firstName}`);
-          // Create dateString in YYYY-MM-DD format
-          const dateStr = date || new Date().toISOString().split('T')[0];
 
           await Attendance.create({
             student: studentIdStr, // Use converted string ID
