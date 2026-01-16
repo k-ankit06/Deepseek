@@ -75,10 +75,16 @@ const markAttendance = async (req, res) => {
           continue;
         }
 
-        // Check if attendance already marked for today
+        // Parse date for range query to avoid timezone issues
+        const startOfDay = new Date(attendanceDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(attendanceDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Check if attendance already marked for today using date range
         const existingAttendance = await Attendance.findOne({
           student: studentId,
-          date: attendanceDate,
+          date: { $gte: startOfDay, $lte: endOfDay },
         });
 
         if (existingAttendance) {

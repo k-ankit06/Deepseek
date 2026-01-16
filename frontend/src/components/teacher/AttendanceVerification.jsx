@@ -66,7 +66,20 @@ const AttendanceVerification = () => {
       const response = await apiMethods.getDailyAttendance({ date: selectedDate })
 
       if (response.success && response.data && response.data.length > 0) {
-        const records = response.data.map((att, i) => ({
+        // Deduplicate records - keep only latest record per student
+        const deduplicatedMap = new Map()
+        
+        response.data.forEach((att) => {
+          const studentId = att.student?._id || att.student
+          const existingRecord = deduplicatedMap.get(studentId)
+          
+          // Keep the most recently updated record for each student
+          if (!existingRecord || new Date(att.markedAt || att.createdAt) > new Date(existingRecord.markedAt || existingRecord.createdAt)) {
+            deduplicatedMap.set(studentId, att)
+          }
+        })
+
+        const records = Array.from(deduplicatedMap.values()).map((att, i) => ({
           id: att._id || `ATT${1000 + i}`,
           studentId: att.student?._id || att.student,
           studentName: att.student?.firstName ? `${att.student.firstName} ${att.student.lastName || ''}` : 'Unknown',
@@ -76,7 +89,7 @@ const AttendanceVerification = () => {
           date: selectedDate,
           status: att.status || 'absent',
           confidence: att.confidence || 0,
-          recognized: att.recognizedBy === 'face',
+          recognized: att.recognitionMethod === 'face' || att.recognizedBy === 'face',
           timestamp: att.createdAt || new Date().toISOString(),
           teacher: att.markedBy?.name || 'System',
           remarks: att.remarks || '',

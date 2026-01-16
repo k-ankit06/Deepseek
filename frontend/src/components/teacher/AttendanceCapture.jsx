@@ -152,9 +152,13 @@ const AttendanceCapture = () => {
       if (isOfflineMode || !isOnline) {
         const cachedStudents = getCachedStudents(classId)
         if (cachedStudents.length > 0) {
+          // Save ALL students
+          setAllStudentsForClass(cachedStudents)
+          
+          // Initialize all students as PENDING (not yet marked)
           const studentList = cachedStudents.map(s => ({
             ...s,
-            status: 'present',
+            status: 'pending',
             confidence: 0
           }))
           setStudents(studentList)
@@ -162,6 +166,7 @@ const AttendanceCapture = () => {
         } else {
           toast.error('No cached students for this class. Go online first to load data.')
           setStudents([])
+          setAllStudentsForClass([])
         }
         return
       }
@@ -826,62 +831,83 @@ const AttendanceCapture = () => {
             </Card>
           </div>
 
-          {/* Student List - ONLY show PRESENT students */}
+          {/* Student List - Show ALL students with their current status */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-800">
-                Recognized Students
+                All Students - Review & Adjust
               </h2>
               <span className="text-sm text-gray-500">
                 {selectedClass?.name || 'Class'} - {selectedClass?.section} | {date}
               </span>
             </div>
 
-            {presentCount === 0 ? (
+            {students.length === 0 ? (
               <div className="text-center py-8">
                 <UserX className="mx-auto text-gray-400 mb-3" size={40} />
-                <p className="text-gray-600 font-medium">No students recognized</p>
-                <p className="text-sm text-gray-500 mt-1">Try capturing again with better lighting</p>
+                <p className="text-gray-600 font-medium">No students in this class</p>
               </div>
             ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {students.filter(s => s.status === 'present').map((student) => (
-                  <div
-                    key={student._id}
-                    className="flex items-center justify-between p-4 rounded-lg border-2 border-green-200 bg-green-50"
-                  >
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center mr-3 bg-green-500">
-                        <CheckCircle className="text-white" size={20} />
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-800">
-                          {student.firstName} {student.lastName}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Roll: {student.rollNumber}
-                          {student.confidence > 0 && (
-                            <span className="ml-2 text-green-600">
-                              ({Math.round(student.confidence)}% confidence)
-                            </span>
+              <>
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                  💡 <strong>Click on a student row to toggle status:</strong> Present ↔ Absent
+                </div>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {students.map((student) => (
+                    <div
+                      key={student._id}
+                      onClick={() => toggleStudentStatus(student._id)}
+                      className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        student.status === 'present'
+                          ? 'border-green-200 bg-green-50 hover:bg-green-100'
+                          : 'border-red-200 bg-red-50 hover:bg-red-100'
+                      }`}
+                    >
+                      <div className="flex items-center flex-1">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
+                          student.status === 'present' ? 'bg-green-500' : 'bg-red-500'
+                        }`}>
+                          {student.status === 'present' ? (
+                            <CheckCircle className="text-white" size={20} />
+                          ) : (
+                            <XCircle className="text-white" size={20} />
                           )}
                         </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800">
+                            {student.firstName} {student.lastName}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Roll: {student.rollNumber}
+                            {student.confidence > 0 && student.status === 'present' && (
+                              <span className="ml-2 text-green-600">
+                                ({Math.round(student.confidence)}% confidence)
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        student.status === 'present'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {student.status === 'present' ? 'Present' : 'Absent'}
+                      </span>
                     </div>
-                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                      Present
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
 
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-700">
-                📋 <strong>On Submit:</strong> {presentCount} student(s) → <span className="text-green-600 font-bold">Present</span>,
-                {' '}{allStudentsForClass.length - presentCount} student(s) → <span className="text-red-600 font-bold">Absent</span>
-              </p>
-            </div>
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-700">
+                    📋 <strong>Summary:</strong> <span className="text-green-600 font-bold">{presentCount} Present</span>
+                    {' '}|{' '}
+                    <span className="text-red-600 font-bold">{absentCount} Absent</span>
+                    {pendingCount > 0 && <span className="text-orange-600 font-bold"> | {pendingCount} Pending (will be Absent)</span>}
+                  </p>
+                </div>
+              </>
+            )}
 
             <div className="mt-6 flex flex-wrap gap-3 justify-between">
               <Button
