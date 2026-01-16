@@ -19,6 +19,10 @@ const attendanceSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
+  // Date as string (YYYY-MM-DD) for reliable unique constraint
+  dateString: {
+    type: String,
+  },
   status: {
     type: String,
     enum: ['present', 'absent', 'late', 'leave'],
@@ -76,8 +80,9 @@ const attendanceSchema = new mongoose.Schema({
   },
 });
 
-// Compound index for unique attendance per student per day
-attendanceSchema.index({ student: 1, date: 1 }, { unique: true });
+// Index for unique attendance per student per day using dateString
+// sparse: true allows records with null dateString
+attendanceSchema.index({ student: 1, dateString: 1 }, { unique: true, sparse: true });
 
 // Index for efficient querying
 attendanceSchema.index({ class: 1, date: 1 });

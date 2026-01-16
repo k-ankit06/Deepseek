@@ -23,13 +23,13 @@ const markAttendance = async (req, res) => {
     console.log('Date:', date);
     console.log('Mode:', mode);
     console.log('Total students in data:', attendanceData?.length);
-    
+
     if (attendanceData && attendanceData.length > 0) {
-      console.log('Student IDs being submitted:', attendanceData.map(a => ({ 
-        id: a.studentId, 
+      console.log('Student IDs being submitted:', attendanceData.map(a => ({
+        id: a.studentId,
         type: typeof a.studentId,
-        name: a.studentName, 
-        status: a.status 
+        name: a.studentName,
+        status: a.status
       })));
     }
 
@@ -124,21 +124,21 @@ const markAttendance = async (req, res) => {
           // First try: Direct findById
           console.log('  → Attempt 1: Student.findById()');
           student = await Student.findById(studentIdStr);
-          
+
           if (student) {
             console.log('  ✅ Found via findById!');
           } else {
             console.log('  ❌ Not found via findById, trying findOne...');
-            
+
             // Second try: findOne with _id
             console.log('  → Attempt 2: Student.findOne({ _id })');
             student = await Student.findOne({ _id: studentIdStr });
-            
+
             if (student) {
               console.log('  ✅ Found via findOne!');
             } else {
               console.log('  ❌ Not found via findOne either');
-              
+
               // Third try: Maybe it's just a string ID that needs conversion
               if (mongoose.Types.ObjectId.isValid(studentIdStr)) {
                 console.log('  → Attempt 3: Testing with direct ObjectId conversion');
@@ -170,7 +170,7 @@ const markAttendance = async (req, res) => {
         if (!student) {
           console.error(`  ❌ FINAL: Student still not found with ID: ${studentIdStr}`);
           console.error('  💾 Available students in class:', allClassStudents.map(s => s._id.toString()));
-          
+
           results.failed++;
           results.details.push({
             studentId: studentIdStr,
@@ -182,16 +182,13 @@ const markAttendance = async (req, res) => {
 
         console.log(`  ✅ SUCCESS: Student found: ${student.firstName} ${student.lastName}`);
 
-        // Parse date for range query to avoid timezone issues
-        const startOfDay = new Date(attendanceDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(attendanceDate);
-        endOfDay.setHours(23, 59, 59, 999);
+        // Get date string for lookup
+        const dateStr = date || new Date().toISOString().split('T')[0];
 
-        // Check if attendance already marked for today using date range
+        // Check if attendance already marked for today using dateString
         const existingAttendance = await Attendance.findOne({
-          student: studentIdStr, // Use converted string ID
-          date: { $gte: startOfDay, $lte: endOfDay },
+          student: studentIdStr,
+          dateString: dateStr,
         });
 
         if (existingAttendance) {
@@ -209,11 +206,15 @@ const markAttendance = async (req, res) => {
         } else {
           // Create new attendance record
           console.log(`  ✨ Creating new attendance for ${student.firstName}`);
+          // Create dateString in YYYY-MM-DD format
+          const dateStr = date || new Date().toISOString().split('T')[0];
+
           await Attendance.create({
             student: studentIdStr, // Use converted string ID
             class: classId,
             school: effectiveSchoolId,
             date: attendanceDate,
+            dateString: dateStr, // Store date as string for unique constraint
             status,
             markedBy,
             recognitionMethod: mode || 'manual',
