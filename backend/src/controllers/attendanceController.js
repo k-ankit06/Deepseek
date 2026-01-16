@@ -831,24 +831,65 @@ const processOfflineRecognition = async (req, res) => {
 const markAttendanceHelper = async (data) => {
   const { classId, date, attendanceData, recognitionResults, mode, markedBy, schoolId } = data;
 
+  // Get dateString in YYYY-MM-DD format
+  const dateObj = new Date(date);
+  const dateString = dateObj.toISOString().split('T')[0];
+
+  // Create date range for finding old records
+  const startOfDay = new Date(dateObj);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(dateObj);
+  endOfDay.setHours(23, 59, 59, 999);
+
   for (const item of attendanceData) {
-    const attendance = new Attendance({
-      student: item.studentId,
-      class: classId,
-      school: schoolId,
-      date: new Date(date),
-      status: item.status,
-      markedBy,
-      recognitionMethod: mode === 'offline' ? 'offline_auto' : 'auto',
-      confidenceScore: item.confidenceScore,
-      syncStatus: mode === 'offline' ? 'pending' : 'synced',
+    const studentIdStr = item.studentId?.toString() || item.studentId;
+
+    // First, try to find existing record
+    let existingAttendance = await Attendance.findOne({
+      student: studentIdStr,
+      dateString: dateString,
     });
 
-    if (mode === 'offline') {
-      attendance.offlineId = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Fallback: check for old records without dateString
+    if (!existingAttendance) {
+      existingAttendance = await Attendance.findOne({
+        student: studentIdStr,
+        dateString: { $in: [null, undefined] },
+        date: { $gte: startOfDay, $lte: endOfDay },
+      });
     }
 
-    await attendance.save();
+    if (existingAttendance) {
+      // Update existing
+      existingAttendance.status = item.status;
+      existingAttendance.markedBy = markedBy;
+      existingAttendance.markedAt = new Date();
+      existingAttendance.recognitionMethod = mode === 'offline' ? 'offline_auto' : 'auto';
+      existingAttendance.confidenceScore = item.confidenceScore;
+      existingAttendance.syncStatus = mode === 'offline' ? 'pending' : 'synced';
+      existingAttendance.dateString = dateString; // Update old records!
+      await existingAttendance.save();
+    } else {
+      // Create new
+      const attendance = new Attendance({
+        student: studentIdStr,
+        class: classId,
+        school: schoolId,
+        date: dateObj,
+        dateString: dateString, // Include dateString!
+        status: item.status,
+        markedBy,
+        recognitionMethod: mode === 'offline' ? 'offline_auto' : 'auto',
+        confidenceScore: item.confidenceScore,
+        syncStatus: mode === 'offline' ? 'pending' : 'synced',
+      });
+
+      if (mode === 'offline') {
+        attendance.offlineId = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      }
+
+      await attendance.save();
+    }
   }
 
   // Update face registration status for recognized students
