@@ -62,10 +62,13 @@ const markAttendance = async (req, res) => {
       try {
         const { studentId, status, checkInTime, remarks, confidenceScore } = item;
 
+        console.log(`Processing student: ${item.studentName} (ID: ${studentId}, Status: ${status})`);
+
         // Verify student - less strict, just check if exists
         const student = await Student.findById(studentId);
 
         if (!student) {
+          console.warn(`❌ Student not found with ID: ${studentId}`);
           results.failed++;
           results.details.push({
             studentId,
@@ -74,6 +77,8 @@ const markAttendance = async (req, res) => {
           });
           continue;
         }
+
+        console.log(`✅ Student found: ${student.firstName} ${student.lastName}`);
 
         // Parse date for range query to avoid timezone issues
         const startOfDay = new Date(attendanceDate);
@@ -89,6 +94,7 @@ const markAttendance = async (req, res) => {
 
         if (existingAttendance) {
           // Update existing attendance
+          console.log(`  ↻ Updating existing attendance for ${student.firstName}`);
           existingAttendance.status = status;
           existingAttendance.markedBy = markedBy;
           existingAttendance.markedAt = new Date();
@@ -100,6 +106,7 @@ const markAttendance = async (req, res) => {
           await existingAttendance.save();
         } else {
           // Create new attendance record
+          console.log(`  ✨ Creating new attendance for ${student.firstName}`);
           await Attendance.create({
             student: studentId,
             class: classId,
@@ -183,6 +190,16 @@ const markAttendance = async (req, res) => {
       success: true,
       message: `Attendance marked successfully. Success: ${results.success}, Failed: ${results.failed}`,
       data: results,
+    });
+
+    console.log(`\n✅ ATTENDANCE SUBMISSION COMPLETE:`, {
+      classId,
+      date,
+      totalStudents: attendanceData.length,
+      successCount: results.success,
+      failedCount: results.failed,
+      successStudents: results.details.filter(d => d.status === 'success').map(d => `${d.studentName}(${d.attendanceStatus})`),
+      failedStudents: results.details.filter(d => d.status === 'failed').map(d => `${d.studentId}(${d.reason})`)
     });
   } catch (error) {
     console.error('Mark attendance error:', error);

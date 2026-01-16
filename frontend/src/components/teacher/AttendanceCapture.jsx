@@ -157,7 +157,11 @@ const AttendanceCapture = () => {
           
           // Initialize all students as PENDING (not yet marked)
           const studentList = cachedStudents.map(s => ({
-            ...s,
+            _id: s._id ? (typeof s._id === 'object' ? s._id.toString() : String(s._id)) : undefined,
+            firstName: s.firstName,
+            lastName: s.lastName || '',
+            rollNumber: s.rollNumber,
+            class: s.class,
             status: 'pending',
             confidence: 0
           }))
@@ -191,11 +195,26 @@ const AttendanceCapture = () => {
       setAllStudentsForClass(studentData)
 
       // Initialize all students as PENDING (not yet marked)
-      const studentList = studentData.map(s => ({
-        ...s,
-        status: 'pending',
-        confidence: 0
-      }))
+      const studentList = studentData.map(s => {
+        // Explicitly ensure _id is preserved and converted to string
+        const studentId = s._id ? (typeof s._id === 'object' ? s._id.toString() : String(s._id)) : undefined
+        
+        return {
+          _id: studentId,
+          firstName: s.firstName,
+          lastName: s.lastName || '',
+          rollNumber: s.rollNumber,
+          class: s.class,
+          status: 'pending',
+          confidence: 0
+        }
+      })
+      
+      console.log('📚 Students initialized:', {
+        total: studentList.length,
+        students: studentList.map(s => ({ id: s._id, name: `${s.firstName} ${s.lastName}`, status: s.status }))
+      })
+      
       setStudents(studentList)
     } catch (error) {
       console.error('Failed to fetch students:', error)
@@ -295,30 +314,45 @@ const AttendanceCapture = () => {
 
         // Update local state - PRESERVE previous present, add new recognized
         const updatedStudents = allStudentsForClass.map(student => {
-          const studentIdStr = student._id?.toString()
-
+          // Ensure consistent ID format
+          const studentIdStr = student._id ? (typeof student._id === 'object' ? student._id.toString() : String(student._id)) : undefined
+          
           // Keep previously present students as present
           if (previouslyPresentIds.includes(studentIdStr)) {
-            const existing = previouslyPresentStudents.find(s => s._id?.toString() === studentIdStr)
-            return existing || { ...student, status: 'present', confidence: 0 }
+            const existing = previouslyPresentStudents.find(s => {
+              const sId = s._id ? (typeof s._id === 'object' ? s._id.toString() : String(s._id)) : undefined
+              return sId === studentIdStr
+            })
+            return existing || { 
+              ...student, 
+              _id: studentIdStr,
+              status: 'present', 
+              confidence: 0 
+            }
           }
 
           // Check if newly recognized
           const recognition = recognitions.find(r => {
-            const recogId = r.studentId?.toString() || r.studentId
+            const recogId = r.studentId ? (typeof r.studentId === 'object' ? r.studentId.toString() : String(r.studentId)) : undefined
             return recogId === studentIdStr || recogId === student._id
           })
 
           if (recognition) {
             return {
               ...student,
+              _id: studentIdStr,
               status: 'present',
               confidence: recognition.confidence || recognition.confidenceScore * 100 || 0
             }
           }
 
           // Not recognized - keep as pending (NOT saved to DB yet)
-          return { ...student, status: 'pending', confidence: 0 }
+          return { 
+            ...student, 
+            _id: studentIdStr,
+            status: 'pending', 
+            confidence: 0 
+          }
         })
 
         setStudents(updatedStudents)
@@ -330,6 +364,13 @@ const AttendanceCapture = () => {
         }).length
         const presentCount = updatedStudents.filter(s => s.status === 'present').length
         const pendingCount = updatedStudents.filter(s => s.status === 'pending').length
+
+        console.log('🎯 After processing:', {
+          total: updatedStudents.length,
+          presentCount,
+          pendingCount,
+          students: updatedStudents.map(s => ({ id: s._id, name: `${s.firstName} ${s.lastName}`, status: s.status, confidence: s.confidence }))
+        })
 
         if (newlyRecognizedCount > 0) {
           toast.success(`✅ ${newlyRecognizedCount} new recognized! Total: ${presentCount} present, ${pendingCount} pending`, { id: 'recognition-result' })
@@ -359,7 +400,16 @@ const AttendanceCapture = () => {
 
       // Initialize students as pending if not already
       if (students.length === 0) {
-        setStudents(allStudentsForClass.map(s => ({ ...s, status: 'pending', confidence: 0 })))
+        const studentList = allStudentsForClass.map(s => ({
+          _id: s._id ? (typeof s._id === 'object' ? s._id.toString() : String(s._id)) : undefined,
+          firstName: s.firstName,
+          lastName: s.lastName || '',
+          rollNumber: s.rollNumber,
+          class: s.class,
+          status: 'pending',
+          confidence: 0
+        }))
+        setStudents(studentList)
       }
       setStep(3)
     } finally {
@@ -369,17 +419,39 @@ const AttendanceCapture = () => {
 
   // Toggle student attendance status (pending → present → absent → pending)
   const toggleStudentStatus = (studentId) => {
-    setStudents(prev =>
-      prev.map(student => {
-        if (student._id === studentId) {
+    console.log('🔄 Toggling student status for ID:', studentId)
+    
+    setStudents(prev => {
+      const updated = prev.map(student => {
+        // Ensure comparison works with both string and object IDs
+        const currentId = typeof student._id === 'object' ? student._id.toString() : student._id
+        const targetId = typeof studentId === 'object' ? studentId.toString() : studentId
+        
+        if (currentId === targetId) {
           const nextStatus = student.status === 'pending' ? 'present'
             : student.status === 'present' ? 'absent'
-              : 'present' // absent → present (skip pending in manual toggle)
-          return { ...student, status: nextStatus }
+              : 'present'
+          
+          console.log(`  ✅ Toggled ${student.firstName}: ${student.status} → ${nextStatus}`)
+          
+          // Ensure _id is preserved as string
+          return { 
+            ...student, 
+            _id: typeof student._id === 'object' ? student._id.toString() : student._id,
+            status: nextStatus 
+          }
         }
-        return student
+        
+        // Ensure _id is preserved as string for all students
+        return {
+          ...student,
+          _id: typeof student._id === 'object' ? student._id.toString() : student._id
+        }
       })
-    )
+      
+      console.log('Updated students:', updated.map(s => ({ id: s._id, name: s.firstName, status: s.status })))
+      return updated
+    })
   }
 
   // Final Submit - Save ALL students (present as present, pending as absent)
@@ -387,13 +459,38 @@ const AttendanceCapture = () => {
     setIsSubmitting(true)
     try {
       // Build final attendance - present stay present, pending become absent
-      const finalAttendance = students.map(student => ({
-        studentId: student._id,
-        studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
-        rollNumber: student.rollNumber,
-        status: student.status === 'present' ? 'present' : 'absent',
-        confidenceScore: student.confidence || 0
-      }))
+      const finalAttendance = students.map(student => {
+        // Ensure _id is a valid string
+        const studentId = student._id ? (typeof student._id === 'object' ? student._id.toString() : String(student._id)) : null
+        
+        if (!studentId) {
+          console.error('❌ Student has no valid ID:', student)
+          throw new Error(`Student ${student.firstName} has no valid ID`)
+        }
+        
+        return {
+          studentId: studentId,
+          studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
+          rollNumber: student.rollNumber,
+          status: student.status === 'present' ? 'present' : 'absent',
+          confidenceScore: student.confidence || 0
+        }
+      })
+
+      // Validate data
+      if (finalAttendance.some(a => !a.studentId)) {
+        toast.error('❌ Some students have invalid IDs. Please try again.')
+        setIsSubmitting(false)
+        return
+      }
+
+      // DEBUG: Log what we're sending
+      console.log('📤 Sending attendance data:', {
+        total: finalAttendance.length,
+        studentIds: finalAttendance.map(s => ({ id: s.studentId, name: s.studentName, status: s.status })),
+        classId: selectedClassId,
+        date: date
+      })
 
       const presentCount = finalAttendance.filter(s => s.status === 'present').length
       const absentCount = finalAttendance.filter(s => s.status === 'absent').length
@@ -425,9 +522,17 @@ const AttendanceCapture = () => {
       // ONLINE MODE: Send ALL students to server in ONE call
       const response = await apiMethods.markAttendance(attendancePayload)
 
+      console.log('📥 Backend Response:', response)
+
       if (response.success) {
+        console.log('✅ Attendance successfully marked:', {
+          success: response.data?.success,
+          failed: response.data?.failed,
+          details: response.data?.details
+        })
         toast.success(`✅ Attendance saved! ${presentCount} present, ${absentCount} absent`)
       } else {
+        console.warn('⚠️ Backend returned error:', response.message)
         storeAttendanceOffline(attendancePayload)
         toast.success('📴 Saved offline - will sync later')
       }
@@ -438,13 +543,16 @@ const AttendanceCapture = () => {
       console.error('Submit error:', error)
 
       // On error, try to store offline
-      const finalAttendance = students.map(student => ({
-        studentId: student._id,
-        studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
-        rollNumber: student.rollNumber,
-        status: student.status === 'present' ? 'present' : 'absent',
-        confidenceScore: student.confidence || 0
-      }))
+      const finalAttendance = students.map(student => {
+        const studentId = student._id ? (typeof student._id === 'object' ? student._id.toString() : String(student._id)) : null
+        return {
+          studentId: studentId,
+          studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
+          rollNumber: student.rollNumber,
+          status: student.status === 'present' ? 'present' : 'absent',
+          confidenceScore: student.confidence || 0
+        }
+      })
 
       const attendancePayload = {
         classId: selectedClassId,
