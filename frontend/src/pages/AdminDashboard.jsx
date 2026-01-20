@@ -235,12 +235,12 @@ const AdminDashboard = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-4 mb-6 md:mb-8">
         {[
-          { label: 'Students', value: stats.totalStudents, icon: Users, color: 'blue', change: '+12' },
-          { label: 'Teachers', value: stats.totalTeachers, icon: Users, color: 'green', change: '+2' },
-          { label: 'Classes', value: stats.totalClasses, icon: BookOpen, color: 'purple', change: '+1' },
-          { label: 'Today', value: `${stats.todayAttendance}%`, icon: TrendingUp, color: 'orange', change: '+3%' },
-          { label: 'Monthly', value: `${stats.monthlyAverage}%`, icon: Calendar, color: 'cyan', change: '+2%' },
-          { label: 'Pending', value: stats.pendingTasks, icon: AlertCircle, color: 'red', change: '-1' },
+          { label: 'Students', value: stats.totalStudents, icon: Users, color: 'blue' },
+          { label: 'Teachers', value: stats.totalTeachers, icon: Users, color: 'green' },
+          { label: 'Classes', value: stats.totalClasses, icon: BookOpen, color: 'purple' },
+          { label: 'Today', value: `${stats.todayAttendance}%`, icon: TrendingUp, color: 'orange' },
+          { label: 'Monthly', value: `${stats.monthlyAverage}%`, icon: Calendar, color: 'cyan' },
+          { label: 'Pending', value: stats.pendingTasks, icon: AlertCircle, color: 'red' },
         ].map((stat, index) => (
           <motion.div
             key={index}
@@ -253,10 +253,6 @@ const AdminDashboard = () => {
                 <div className={`p-2 md:p-3 rounded-xl bg-${stat.color}-100`}>
                   <stat.icon className={`text-${stat.color}-600`} size={18} />
                 </div>
-                <span className={`text-xs font-medium hidden sm:inline ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                  {stat.change}
-                </span>
               </div>
               <div className="text-lg md:text-2xl font-bold text-gray-800">{stat.value}</div>
               <div className="text-xs md:text-sm text-gray-600 mt-1 truncate">{stat.label}</div>
