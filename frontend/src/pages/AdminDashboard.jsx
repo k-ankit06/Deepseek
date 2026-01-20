@@ -46,6 +46,10 @@ const AdminDashboard = () => {
       let studentCount = 0;
       let classCount = 0;
       let teacherCount = 0;
+      let todayRate = 0;
+      let monthlyRate = 0;
+      let weeklyData = [];
+      let activities = [];
 
       try {
         // Fetch students count
@@ -71,17 +75,69 @@ const AdminDashboard = () => {
         console.log('Could not fetch users');
       }
 
+      try {
+        // Fetch today's attendance
+        const today = new Date().toISOString().split('T')[0];
+        const todayRes = await apiMethods.getDailyAttendance({ date: today });
+        if (todayRes?.success && todayRes?.data) {
+          const records = Array.isArray(todayRes.data) ? todayRes.data : [];
+          const present = records.filter(r => r.status === 'present').length;
+          const total = records.length;
+          todayRate = total > 0 ? Math.round((present / total) * 100) : 0;
+
+          // Create recent activity from today's attendance
+          if (records.length > 0) {
+            activities = records.slice(0, 5).map((r, i) => ({
+              id: i + 1,
+              activity: `${r.student?.firstName || 'Student'} marked ${r.status}`,
+              user: r.class?.name || 'Class',
+              time: r.markedAt ? new Date(r.markedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Today',
+              type: r.status === 'present' ? 'success' : 'warning'
+            }));
+          }
+        }
+      } catch (e) {
+        console.log('Could not fetch today attendance');
+      }
+
+      try {
+        // Fetch last 7 days attendance for weekly chart
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+
+          const dayRes = await apiMethods.getDailyAttendance({ date: dateStr });
+          if (dayRes?.success && dayRes?.data) {
+            const records = Array.isArray(dayRes.data) ? dayRes.data : [];
+            const present = records.filter(r => r.status === 'present').length;
+            const total = records.length;
+            const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+            weeklyData.push(rate);
+          } else {
+            weeklyData.push(0);
+          }
+        }
+
+        // Calculate monthly average from weekly data
+        const nonZeroData = weeklyData.filter(v => v > 0);
+        monthlyRate = nonZeroData.length > 0 ? Math.round(nonZeroData.reduce((a, b) => a + b, 0) / nonZeroData.length) : 0;
+      } catch (e) {
+        console.log('Could not fetch weekly attendance');
+        weeklyData = [0, 0, 0, 0, 0, 0, 0];
+      }
+
       setStats({
         totalStudents: studentCount,
         totalTeachers: teacherCount,
         totalClasses: classCount,
-        todayAttendance: 0,
+        todayAttendance: todayRate,
         pendingTasks: 0,
-        monthlyAverage: 0
+        monthlyAverage: monthlyRate
       });
 
-      setRecentActivity([]);
-      setAttendanceData([]);
+      setRecentActivity(activities);
+      setAttendanceData(weeklyData);
       setIsLoading(false);
     };
 
@@ -315,24 +371,32 @@ const AdminDashboard = () => {
             </div>
 
             <div className="space-y-4">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className={`p-2 rounded-lg mr-3 ${activity.type === 'success' ? 'bg-green-100' :
-                    activity.type === 'warning' ? 'bg-yellow-100' : 'bg-blue-100'
-                    }`}>
-                    {activity.type === 'success' ? (
-                      <CheckCircle size={16} className="text-green-600" />
-                    ) : (
-                      <AlertCircle size={16} className="text-yellow-600" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-800">{activity.activity}</p>
-                    <p className="text-sm text-gray-600">{activity.user}</p>
-                  </div>
-                  <div className="text-sm text-gray-500 whitespace-nowrap">{activity.time}</div>
+              {recentActivity.length === 0 ? (
+                <div className="text-center py-8">
+                  <Activity className="mx-auto text-gray-400 mb-3" size={40} />
+                  <p className="text-gray-500">No recent activity</p>
+                  <p className="text-sm text-gray-400">Attendance records will appear here</p>
                 </div>
-              ))}
+              ) : (
+                recentActivity.map((activity) => (
+                  <div key={activity.id} className="flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className={`p-2 rounded-lg mr-3 ${activity.type === 'success' ? 'bg-green-100' :
+                      activity.type === 'warning' ? 'bg-yellow-100' : 'bg-blue-100'
+                      }`}>
+                      {activity.type === 'success' ? (
+                        <CheckCircle size={16} className="text-green-600" />
+                      ) : (
+                        <AlertCircle size={16} className="text-yellow-600" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-800">{activity.activity}</p>
+                      <p className="text-sm text-gray-600">{activity.user}</p>
+                    </div>
+                    <div className="text-sm text-gray-500 whitespace-nowrap">{activity.time}</div>
+                  </div>
+                ))
+              )}
             </div>
           </Card>
         </motion.div>
@@ -360,20 +424,35 @@ const AdminDashboard = () => {
           </div>
 
           {/* Chart */}
-          <div className="h-48 flex items-end gap-2">
-            {attendanceData.map((value, index) => (
-              <div key={index} className="flex-1 flex flex-col items-center">
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: `${value}%` }}
-                  transition={{ duration: 1, delay: index * 0.1 }}
-                  className="w-full bg-gradient-to-t from-blue-500 to-cyan-300 rounded-t-lg"
-                />
-                <div className="text-xs mt-2 font-medium">Day {index + 1}</div>
-                <div className="text-xs text-gray-500">{value}%</div>
-              </div>
-            ))}
-          </div>
+          {attendanceData.length === 0 || attendanceData.every(v => v === 0) ? (
+            <div className="h-48 flex flex-col items-center justify-center text-gray-400">
+              <TrendingUp size={48} className="mb-3" />
+              <p className="text-gray-500">No attendance data this week</p>
+              <p className="text-sm text-gray-400">Take attendance to see trends</p>
+            </div>
+          ) : (
+            <div className="h-48 flex items-end gap-2">
+              {attendanceData.map((value, index) => {
+                const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const date = new Date();
+                date.setDate(date.getDate() - (6 - index));
+                const dayName = dayNames[date.getDay()];
+
+                return (
+                  <div key={index} className="flex-1 flex flex-col items-center">
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: `${Math.max(value, 5)}%` }}
+                      transition={{ duration: 1, delay: index * 0.1 }}
+                      className={`w-full rounded-t-lg ${value > 0 ? 'bg-gradient-to-t from-blue-500 to-cyan-300' : 'bg-gray-200'}`}
+                    />
+                    <div className="text-xs mt-2 font-medium">{dayName}</div>
+                    <div className="text-xs text-gray-500">{value}%</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Chart Legend */}
           <div className="flex items-center justify-center gap-6 mt-6 pt-6 border-t">
@@ -382,51 +461,52 @@ const AdminDashboard = () => {
               <span className="text-sm text-gray-600">Attendance %</span>
             </div>
             <div className="flex items-center">
-              <div className="w-3 h-3 bg-gradient-to-t from-green-500 to-emerald-300 rounded-full mr-2"></div>
+              <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
               <span className="text-sm text-gray-600">Target: 95%</span>
             </div>
           </div>
         </Card>
       </motion.div>
 
-      {/* System Status */}
+      {/* System Status & Stats */}
       <div className="grid md:grid-cols-3 gap-6 mt-8">
         <Card className="p-5">
           <h3 className="font-bold text-gray-800 mb-3">System Status</h3>
           <div className="space-y-3">
-            {[
-              { service: 'AI Face Recognition', status: 'Online', color: 'text-green-600' },
-              { service: 'Database', status: 'Online', color: 'text-green-600' },
-              { service: 'Backup Service', status: 'Online', color: 'text-green-600' },
-              { service: 'Sync Service', status: 'Syncing...', color: 'text-yellow-600' },
-            ].map((item, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <span className="text-gray-700">{item.service}</span>
-                <span className={`text-sm font-medium ${item.color}`}>{item.status}</span>
-              </div>
-            ))}
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700">AI Face Recognition</span>
+              <span className="text-sm font-medium text-green-600">Online</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700">Database</span>
+              <span className="text-sm font-medium text-green-600">Online</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700">Total Students</span>
+              <span className="text-sm font-medium text-blue-600">{stats.totalStudents}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700">Total Classes</span>
+              <span className="text-sm font-medium text-purple-600">{stats.totalClasses}</span>
+            </div>
           </div>
         </Card>
 
         <Card className="p-5">
-          <h3 className="font-bold text-gray-800 mb-3">Upcoming Tasks</h3>
+          <h3 className="font-bold text-gray-800 mb-3">Attendance Summary</h3>
           <div className="space-y-3">
-            {[
-              { task: 'Monthly Report Generation', date: 'Tomorrow', priority: 'High' },
-              { task: 'System Backup', date: 'Jan 25', priority: 'Medium' },
-              { task: 'Teacher Training', date: 'Jan 28', priority: 'Medium' },
-            ].map((item, index) => (
-              <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
-                <div>
-                  <div className="font-medium">{item.task}</div>
-                  <div className="text-sm text-gray-600">{item.date}</div>
-                </div>
-                <span className={`px-2 py-1 rounded text-xs ${item.priority === 'High' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                  {item.priority}
-                </span>
-              </div>
-            ))}
+            <div className="flex items-center justify-between p-2 bg-blue-50 rounded">
+              <span className="text-gray-700">Today's Rate</span>
+              <span className="text-lg font-bold text-blue-600">{stats.todayAttendance}%</span>
+            </div>
+            <div className="flex items-center justify-between p-2 bg-green-50 rounded">
+              <span className="text-gray-700">Weekly Average</span>
+              <span className="text-lg font-bold text-green-600">{stats.monthlyAverage}%</span>
+            </div>
+            <div className="flex items-center justify-between p-2 bg-purple-50 rounded">
+              <span className="text-gray-700">Total Teachers</span>
+              <span className="text-lg font-bold text-purple-600">{stats.totalTeachers}</span>
+            </div>
           </div>
         </Card>
 
@@ -436,16 +516,24 @@ const AdminDashboard = () => {
             <div>
               <div className="text-sm text-gray-600 mb-1">Students per Class</div>
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 w-3/4"></div>
+                <div
+                  className="h-full bg-blue-500 transition-all"
+                  style={{ width: stats.totalClasses > 0 ? `${Math.min((stats.totalStudents / stats.totalClasses) * 10, 100)}%` : '0%' }}
+                />
               </div>
-              <div className="text-xs text-gray-600 mt-1">Average: 32 students</div>
+              <div className="text-xs text-gray-600 mt-1">
+                Average: {stats.totalClasses > 0 ? Math.round(stats.totalStudents / stats.totalClasses) : 0} students
+              </div>
             </div>
             <div>
-              <div className="text-sm text-gray-600 mb-1">Teacher Utilization</div>
+              <div className="text-sm text-gray-600 mb-1">Attendance Rate</div>
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 w-5/6"></div>
+                <div
+                  className="h-full bg-green-500 transition-all"
+                  style={{ width: `${stats.todayAttendance}%` }}
+                />
               </div>
-              <div className="text-xs text-gray-600 mt-1">High: 94% utilization</div>
+              <div className="text-xs text-gray-600 mt-1">Today: {stats.todayAttendance}%</div>
             </div>
             <Button
               variant="outline"
@@ -457,8 +545,8 @@ const AdminDashboard = () => {
             </Button>
           </div>
         </Card>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 
