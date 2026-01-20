@@ -69,21 +69,50 @@ const ReportsPage = () => {
       return;
     }
 
+    // Report generation timestamp (unchangeable)
+    const generatedAt = new Date();
+    const reportTimestamp = `Report Generated: ${generatedAt.toLocaleDateString('en-IN', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    })} at ${generatedAt.toLocaleTimeString('en-IN')}`;
+
     // Create CSV headers
-    const headers = ['Date', 'Student Name', 'Roll Number', 'Class', 'Status', 'Time'];
+    const headers = ['Date', 'Time', 'Student Name', 'Roll Number', 'Class', 'Status', 'Marked At'];
+
+    // Helper function to format date properly
+    const formatDate = (dateValue) => {
+      if (!dateValue) return 'N/A';
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleDateString('en-IN', {
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      });
+    };
+
+    // Helper function to format time properly
+    const formatTime = (dateValue) => {
+      if (!dateValue) return 'N/A';
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleTimeString('en-IN', {
+        hour: '2-digit', minute: '2-digit', hour12: true
+      });
+    };
 
     // Create CSV rows
     const rows = data.map(record => [
-      record.date || new Date().toLocaleDateString(),
+      formatDate(record.date || record.createdAt),
+      formatTime(record.markedAt || record.createdAt),
       record.student?.firstName ? `${record.student.firstName} ${record.student.lastName || ''}` : 'N/A',
       record.student?.rollNumber || 'N/A',
       record.class?.name || record.class?.grade || 'N/A',
       record.status || 'N/A',
-      record.time || record.createdAt ? new Date(record.createdAt).toLocaleTimeString() : 'N/A'
+      formatTime(record.markedAt || record.createdAt)
     ]);
 
-    // Combine headers and rows
+    // Combine headers and rows with report metadata
     const csvContent = [
+      `"${reportTimestamp}"`,  // First line - report timestamp (unchangeable proof)
+      '',  // Empty line for spacing
       headers.join(','),
       ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
     ].join('\n');

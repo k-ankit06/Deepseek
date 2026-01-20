@@ -64,20 +64,33 @@ const MonthlySummary = () => {
       return;
     }
 
+    // Report generation timestamp (unchangeable proof)
+    const generatedAt = new Date();
+    const reportTimestamp = `Report Generated: ${generatedAt.toLocaleDateString('en-IN', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    })} at ${generatedAt.toLocaleTimeString('en-IN')}`;
+    const reportInfo = `Monthly Report: ${months[selectedMonth - 1]} ${selectedYear}`;
+
     // Create CSV content
-    const headers = ['Date', 'Present', 'Absent', 'Attendance %'];
+    const headers = ['Date', 'Present', 'Absent', 'Total', 'Attendance %'];
     const rows = monthlyData.map(day => {
       const present = day.attendance?.find(a => a.status === 'present')?.count || 0;
       const absent = day.attendance?.find(a => a.status === 'absent')?.count || 0;
       const total = day.total || 1;
       const rate = Math.round((present / total) * 100);
-      return [day._id, present, absent, `${rate}%`];
+      return [`"${day._id}"`, present, absent, total, `${rate}%`];
     });
 
-    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const csvContent = [
+      `"${reportTimestamp}"`,
+      `"${reportInfo}"`,
+      '',
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
 
     // Download CSV
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
