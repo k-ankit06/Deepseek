@@ -905,23 +905,36 @@ const markAttendanceHelper = async (data) => {
   }
 };
 
-// @desc    Get attendance summary for date range
-// @route   GET /api/attendance/summary
+// @desc    Get attendance summary for date range (supports year/month for calendar)
+// @route   GET /api/attendance/monthly
 // @access  Private
 const getAttendanceSummary = async (req, res) => {
   try {
-    const { startDate, endDate, classId } = req.query;
-    const schoolId = req.user.school;
+    const { startDate, endDate, classId, year, month } = req.query;
+    const schoolId = req.user?.school;
 
-    const query = {
-      school: schoolId,
-    };
+    const query = {};
+
+    // Add school filter if available
+    if (schoolId) {
+      query.school = schoolId;
+    }
 
     if (classId) {
       query.class = classId;
     }
 
-    if (startDate || endDate) {
+    // Handle year/month parameters (for calendar view)
+    if (year && month) {
+      const startOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const endOfMonth = new Date(parseInt(year), parseInt(month), 0);
+      endOfMonth.setHours(23, 59, 59, 999);
+
+      query.date = {
+        $gte: startOfMonth,
+        $lte: endOfMonth
+      };
+    } else if (startDate || endDate) {
       query.date = {};
       if (startDate) {
         query.date.$gte = new Date(startDate);
@@ -933,6 +946,16 @@ const getAttendanceSummary = async (req, res) => {
       }
     }
 
+    console.log('[Monthly Attendance] Query:', JSON.stringify(query));
+
+    // Get individual attendance records for calendar view
+    const attendanceRecords = await Attendance.find(query)
+      .select('student date status dateString')
+      .lean();
+
+    console.log(`[Monthly Attendance] Found ${attendanceRecords.length} records`);
+
+    // Also get summary
     const summary = await Attendance.aggregate([
       {
         $match: query,
@@ -961,9 +984,6 @@ const getAttendanceSummary = async (req, res) => {
       {
         $sort: { _id: -1 },
       },
-      {
-        $limit: 30,
-      },
     ]);
 
     // Get class information if classId provided
@@ -975,11 +995,14 @@ const getAttendanceSummary = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
+        attendance: attendanceRecords, // Individual records for calendar
         summary,
         class: classInfo,
         dateRange: {
           startDate,
           endDate,
+          year,
+          month,
         },
       },
     });
