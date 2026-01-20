@@ -46,7 +46,8 @@ const StudentsPage = () => {
     lastName: '',
     rollNumber: '',
     parentPhone: '',
-    gender: ''
+    gender: '',
+    class: ''
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -130,7 +131,8 @@ const StudentsPage = () => {
       lastName: student.lastName || '',
       rollNumber: student.rollNumber || '',
       parentPhone: student.parentPhone || '',
-      gender: student.gender || ''
+      gender: student.gender || '',
+      class: student.class?._id || student.class || ''
     });
     setShowEditModal(true);
   };
@@ -538,6 +540,22 @@ const StudentsPage = () => {
               <option value="male">Male</option>
               <option value="female">Female</option>
               <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Class & Section *</label>
+            <select
+              value={editForm.class}
+              onChange={(e) => setEditForm({ ...editForm, class: e.target.value })}
+              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Select Class</option>
+              {classes.map(cls => (
+                <option key={cls._id} value={cls._id}>
+                  {cls.name || `Class ${cls.grade}`} - Section {cls.section}
+                </option>
+              ))}
             </select>
           </div>
 
