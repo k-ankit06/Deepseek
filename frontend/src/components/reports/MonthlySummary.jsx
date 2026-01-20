@@ -128,26 +128,49 @@ const MonthlySummary = () => {
         {isLoading ? (
           <div className="h-64 flex items-center justify-center text-gray-500">Loading...</div>
         ) : monthlyData.length === 0 ? (
-          <div className="h-64 flex items-center justify-center text-gray-500">
-            No attendance data for this month
+          <div className="h-64 flex flex-col items-center justify-center text-gray-400">
+            <TrendingUp size={48} className="mb-3" />
+            <p className="text-gray-500">No attendance data for this month</p>
+            <p className="text-sm text-gray-400 mt-1">Take attendance to see trends</p>
           </div>
         ) : (
-          <div className="h-64 flex items-end gap-2">
-            {monthlyData.slice(0, 10).map((day, index) => {
-              const present = day.attendance?.find(a => a.status === 'present')?.count || 0;
-              const total = day.total || 1;
-              const rate = Math.round((present / total) * 100);
-              return (
-                <div key={index} className="flex-1 flex flex-col items-center">
-                  <div
-                    className="w-full bg-blue-500 rounded-t-lg"
-                    style={{ height: `${rate}%` }}
-                  />
-                  <div className="text-xs mt-2">{day._id?.slice(-2)}</div>
-                  <div className="text-xs text-gray-600">{rate}%</div>
-                </div>
-              );
-            })}
+          <div className="h-64">
+            {/* Y-axis labels */}
+            <div className="flex h-full">
+              <div className="flex flex-col justify-between text-xs text-gray-400 pr-2">
+                <span>100%</span>
+                <span>75%</span>
+                <span>50%</span>
+                <span>25%</span>
+                <span>0%</span>
+              </div>
+              {/* Bars */}
+              <div className="flex-1 flex items-end gap-1 border-l border-b border-gray-200 pl-2 pb-6">
+                {monthlyData.map((day, index) => {
+                  const present = day.attendance?.find(a => a.status === 'present')?.count || 0;
+                  const total = day.total || 1;
+                  const rate = Math.round((present / total) * 100);
+                  const barColor = rate >= 90 ? 'from-green-500 to-green-400'
+                    : rate >= 70 ? 'from-yellow-500 to-yellow-400'
+                      : 'from-red-500 to-red-400';
+                  return (
+                    <div key={index} className="flex-1 flex flex-col items-center group cursor-pointer">
+                      <div className="relative w-full">
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                          {day._id}: {rate}% ({present} present)
+                        </div>
+                        <div
+                          className={`w-full bg-gradient-to-t ${barColor} rounded-t-lg transition-all hover:opacity-80`}
+                          style={{ height: `${Math.max(rate * 2, 4)}px` }}
+                        />
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-1">{day._id?.slice(-2)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </Card>
