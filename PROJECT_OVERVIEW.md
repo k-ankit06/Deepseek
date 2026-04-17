@@ -63,7 +63,7 @@ An **AI-powered face recognition system** that automates attendance marking whil
 - Responsive design works on any device
 - Progressive Web App (PWA) capabilities
 - Touch-friendly interface
-- Works on budget smartphones
+- Works on budget mobiles
 
 ### 🔄 Offline Mode
 - Complete functionality without internet

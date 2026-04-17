@@ -28,7 +28,7 @@ const detectFaces = async (req, res) => {
         { image },
         {
           headers: { 'Content-Type': 'application/json' },
-          timeout: 30000,
+          timeout: 120000,
         }
       );
 
@@ -79,7 +79,7 @@ const recognizeFaces = async (req, res) => {
         { image },
         {
           headers: { 'Content-Type': 'application/json' },
-          timeout: 30000,
+          timeout: 120000,
         }
       );
 
@@ -126,7 +126,7 @@ const encodeFace = async (req, res) => {
         { image },
         {
           headers: { 'Content-Type': 'application/json' },
-          timeout: 30000,
+          timeout: 120000,
         }
       );
 
