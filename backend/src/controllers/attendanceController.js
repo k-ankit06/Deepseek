@@ -741,10 +741,17 @@ const recognizeAndMarkAttendance = async (req, res) => {
         }
       } catch (error) {
         console.error('AI service error:', error.message);
-        return res.status(503).json({
+        // Graceful fallback - tell frontend to switch to manual mode
+        return res.status(200).json({
           success: false,
-          message: 'Face recognition service unavailable',
-          error: error.message,
+          message: 'Face recognition service temporarily unavailable. Please use manual attendance mode.',
+          fallback: true,
+          data: {
+            recognized: 0,
+            total: students.length,
+            recognitions: [],
+            errors: ['AI service temporarily unavailable - use manual attendance'],
+          },
         });
       }
     } else {

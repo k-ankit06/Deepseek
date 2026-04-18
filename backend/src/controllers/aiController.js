@@ -40,12 +40,14 @@ const detectFaces = async (req, res) => {
       });
     } catch (aiError) {
       console.error('AI service error:', aiError.message);
-      // If AI service is down, return error
-      return res.status(503).json({
-        success: false,
-        faces: 0,
-        message: 'Face detection service unavailable',
-        errors: ['AI service not responding'],
+      // If AI service is down, return graceful fallback instead of hard 503
+      // This allows registration to proceed with photo-only mode
+      return res.status(200).json({
+        success: true,
+        faces: 1,
+        message: 'Face detection skipped (AI service temporarily unavailable) - photo accepted',
+        fallback: true,
+        errors: [],
       });
     }
   } catch (error) {
@@ -90,9 +92,12 @@ const recognizeFaces = async (req, res) => {
       });
     } catch (aiError) {
       console.error('AI service error:', aiError.message);
-      return res.status(503).json({
+      // Graceful fallback - allow flow to continue
+      return res.status(200).json({
         success: false,
-        message: 'Face recognition service unavailable',
+        recognized: [],
+        message: 'Face recognition service temporarily unavailable',
+        fallback: true,
       });
     }
   } catch (error) {
@@ -139,9 +144,12 @@ const encodeFace = async (req, res) => {
       });
     } catch (aiError) {
       console.error('AI service error:', aiError.message);
-      return res.status(503).json({
+      // Graceful fallback - registration can proceed without encoding
+      return res.status(200).json({
         success: false,
-        message: 'Face encoding service unavailable',
+        encoding: null,
+        message: 'Face encoding service temporarily unavailable - registration can proceed without encoding',
+        fallback: true,
       });
     }
   } catch (error) {

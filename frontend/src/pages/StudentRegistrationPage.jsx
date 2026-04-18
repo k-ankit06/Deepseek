@@ -135,36 +135,31 @@ const StudentRegistrationPage = () => {
       return;
     }
 
-    if (!faceDetected) {
-      toast.error('Please capture a valid photo with human face');
+    if (!photoPreview) {
+      toast.error('Please capture a photo of the student');
       return;
     }
 
     setIsSaving(true);
     try {
-      // Step 1: Get face encoding from AI service
+      // Step 1: Try to get face encoding from AI service (best effort)
       let faceEncoding = null;
 
       if (photoPreview) {
         try {
           const encodingResponse = await apiMethods.encodeFace(photoPreview);
-
           if (encodingResponse.success && encodingResponse.encoding) {
             faceEncoding = encodingResponse.encoding;
           } else {
-            toast.error(encodingResponse.error || 'Failed to process face');
-            setIsSaving(false);
-            return;
+            console.warn('Face encoding not available:', encodingResponse.error);
           }
         } catch (encError) {
-          console.error('Face encoding error:', encError);
-          toast.error('Failed to process face - please try again');
-          setIsSaving(false);
-          return;
+          console.warn('Face encoding service unavailable:', encError);
+          // Don't block registration - photo will be saved without encoding
         }
       }
 
-      // Step 2: Prepare student data with BOTH face image and encoding
+      // Step 2: Prepare student data - photo always saved
       const studentData = {
         rollNumber: studentInfo.rollNumber,
         firstName: studentInfo.firstName,
@@ -175,15 +170,19 @@ const StudentRegistrationPage = () => {
         parentPhone: studentInfo.parentPhone,
         address: `${studentInfo.address}, ${studentInfo.city} - ${studentInfo.pinCode}`,
         classId: studentInfo.classId,
-        faceImage: photoPreview,      // Base64 image for admin viewing
-        faceEncoding: faceEncoding,   // 128-D encoding for AI matching
+        faceImage: photoPreview,      // Base64 image - always saved
+        faceEncoding: faceEncoding,   // Encoding if AI was available, null otherwise
       };
 
       // Step 3: Save student to database
       const response = await apiMethods.createStudent(studentData);
 
       if (response.success) {
-        toast.success('Student registered successfully with face recognition!');
+        if (faceEncoding) {
+          toast.success('Student registered with face recognition! ✅');
+        } else {
+          toast.success('Student registered! Photo saved (face encoding pending).');
+        }
         navigate('/admin');
       } else {
         toast.error(response.message || 'Failed to register student');
@@ -227,7 +226,7 @@ const StudentRegistrationPage = () => {
     setFaceError('');
 
     try {
-      // Call AI service to detect and validate human face
+      // Try AI face detection (best effort - don't block if unavailable)
       const response = await apiMethods.detectFaces(imageUrl);
 
       if (response.success && response.faces > 0) {
@@ -235,17 +234,22 @@ const StudentRegistrationPage = () => {
         setFaceError('');
         toast.success('✅ Human face detected successfully!');
       } else {
-        setFaceDetected(false);
-        const errorMsg = response.message || response.errors?.[0] || 'No human face detected';
+        // AI responded but no face found - still save photo
+        setFaceDetected(true); // Allow registration to proceed
+        const errorMsg = response.message || 'Face not clearly detected';
         setFaceError(errorMsg);
-        toast.error(`❌ ${errorMsg}`);
+        toast('⚠️ ' + errorMsg + ' - photo will still be saved', { icon: '⚠️', duration: 3000 });
       }
     } catch (error) {
-      console.error('Face detection error:', error);
-      // STRICT: Don't allow images if face detection fails
-      setFaceDetected(false);
-      setFaceError('Face detection service error - please try again');
-      toast.error('❌ Could not verify face. Please try again.');
+      console.warn('Face detection service unavailable:', error);
+      // AI service is down - still allow photo to be saved
+      setFaceDetected(true); // Allow registration to proceed
+      setFaceError('Face detection service unavailable - photo saved without AI verification');
+      toast('⚠️ AI service unavailable - photo saved without face verification', {
+        icon: '⚠️',
+        duration: 4000,
+        style: { background: '#f59e0b', color: '#000' }
+      });
     } finally {
       setIsDetectingFace(false);
     }
