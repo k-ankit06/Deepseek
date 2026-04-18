@@ -102,18 +102,37 @@ const StudentsPage = () => {
 
   // Delete student
   const handleDelete = async (studentId) => {
-    if (!window.confirm('Are you sure you want to delete this student?')) {
+    if (!window.confirm('Are you sure you want to delete this student? This action cannot be undone.')) {
       return;
     }
 
     try {
+      console.log('[Delete] Deleting student:', studentId);
       const response = await apiMethods.deleteStudent(studentId);
-      if (response.success) {
-        toast.success('Student deleted successfully', { id: 'student-delete' });
-        fetchData(); // Refresh list
-      }
+      console.log('[Delete] Response:', response);
+
+      // Immediately remove from local state (don't wait for fetchData)
+      setStudents(prev => prev.filter(s => s._id !== studentId));
+      
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        total: Math.max(0, prev.total - 1),
+        active: Math.max(0, prev.active - 1),
+      }));
+
+      toast.success('Student deleted successfully! ✅', { id: 'student-delete' });
+      
     } catch (error) {
-      toast.error('Failed to delete student', { id: 'student-delete' });
+      console.error('[Delete] Error:', error);
+      const errorMsg = error?.message || error?.response?.data?.message || 'Failed to delete student';
+      
+      // Check if it's a permission error
+      if (error?.response?.status === 403) {
+        toast.error('Permission denied - only admin can delete students', { id: 'student-delete' });
+      } else {
+        toast.error(errorMsg, { id: 'student-delete' });
+      }
     }
   };
 

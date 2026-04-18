@@ -40,7 +40,7 @@ router.get('/search', studentController.searchStudents);
 router.get('/unregistered-faces', studentController.getStudentsWithoutFaceRegistration);
 router.get('/:id', studentController.getStudent);
 router.put('/:id', authorize('teacher', 'admin'), validate(updateStudentValidation), studentController.updateStudent);
-router.delete('/:id', authorize('admin'), studentController.deleteStudent);
+router.delete('/:id', authorize('admin', 'teacher'), studentController.deleteStudent);
 router.post('/:id/face', authorize('teacher', 'admin'), studentController.registerStudentFace);
 
 module.exports = router;
