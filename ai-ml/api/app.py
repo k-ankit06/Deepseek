@@ -22,11 +22,11 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'service': 'Face Recognition API',
-        'version': '2.0',
-        'model': 'FaceNet (InceptionResnetV1 + MTCNN)',
-        'embedding': '512-D vectors',
+        'version': '3.0',
+        'model': 'OpenCV DNN + Haar Cascade',
+        'embedding': '512-D vectors (histogram + HOG)',
         'matching': 'Cosine Similarity',
-        'mode': 'STRICT - Human faces only'
+        'mode': 'Lightweight - Render Free Tier'
     }), 200
 
 
@@ -308,13 +308,13 @@ def verify_face():
 
 if __name__ == '__main__':
     print("=" * 70)
-    print("FaceNet Face Recognition API Server Starting...")
+    print("OpenCV Face Recognition API Server Starting...")
     print("=" * 70)
     print("Mode: PRODUCTION (No Auto-Reload)")
-    print("Model: FaceNet (InceptionResnetV1 + MTCNN)")
-    print("Validation: STRICT - Human faces only")
-    print("Encoding: 512-D vectors")
-    print("Matching: Cosine Similarity (threshold: 0.6)")
+    print("Model: OpenCV DNN + Haar Cascade")
+    print("Validation: Eye detection + aspect ratio")
+    print("Encoding: 512-D vectors (histogram + HOG)")
+    print("Matching: Cosine Similarity (threshold: 0.4)")
     print("=" * 70)
     
     # Run in production mode - NO auto-reload

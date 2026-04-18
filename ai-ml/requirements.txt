@@ -1,23 +1,18 @@
-# AI-ML Service Requirements - Lightweight for Render Free Tier
-# Total install size: ~150MB (vs ~1.5GB+ with PyTorch)
+# AI-ML Service Requirements - Ultra-Lightweight for Render Free Tier
+# Uses ONLY OpenCV - no system dependencies needed (no apt-get)
+# Total install size: ~50MB
 
 # Flask server
 flask>=2.3.0
 flask-cors>=4.0.0
 gunicorn>=21.0.0
 
-# Face Detection & Recognition (Lightweight - NO PyTorch)
-mediapipe>=0.10.0
-insightface>=0.7.3
-onnxruntime>=1.16.0
-
-# Image processing
+# Image processing (OpenCV headless = no GUI/system deps)
 opencv-python-headless>=4.8.0
 pillow>=10.0.0
 
-# NumPy & SciPy
+# NumPy (for array math)
 numpy<2.0.0
-scikit-learn>=1.3.0
 
 # Utilities
 python-dotenv>=1.0.0
