@@ -1,6 +1,9 @@
-﻿FROM python:3.10-slim
+FROM python:3.10-slim
 
 WORKDIR /app
+
+# Don't buffer Python output (for Render logs)
+ENV PYTHONUNBUFFERED=1
 
 # Install system dependencies (minimal for MediaPipe + OpenCV)
 RUN apt-get update && apt-get install -y \
@@ -15,8 +18,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Expose port
+# Expose port (Render assigns its own via $PORT)
 EXPOSE 8000
 
-# Run the application - single worker to save memory
-CMD ["python", "-m", "gunicorn", "--bind", "0.0.0.0:8000", "--timeout", "120", "--workers", "1", "--threads", "2", "wsgi:app"]
+# Run the application - use $PORT for Render compatibility
+CMD gunicorn --bind 0.0.0.0:${PORT:-8000} --timeout 120 --workers 1 --threads 2 api.app:app
