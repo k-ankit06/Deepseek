@@ -124,7 +124,7 @@ An **AI-powered face recognition system** that automates attendance marking whil
 | **face_recognition** | Face Detection & Recognition |
 | **OpenCV** | Image Processing |
 | **NumPy** | Numerical Operations |
-| **dlib** | ML Library |
+| **Facenet** | Face Embedding |
 
 ### Deployment
 | Service | Purpose |

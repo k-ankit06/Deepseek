@@ -210,7 +210,7 @@ class FaceRecognitionService:
     def is_human_face(self, image: np.ndarray, face_data: Dict) -> Tuple[bool, str]:
         """
         Validate if detected face is a human face
-        Uses eye detection for validation
+        Uses eye detection for strict validation
         """
         try:
             box = face_data['box']
@@ -229,7 +229,7 @@ class FaceRecognitionService:
             if aspect < 0.7 or aspect > 2.0:
                 return False, "Invalid face proportions - please face the camera directly"
             
-            # Try eye detection for human validation
+            # Try eye detection for human validation (STRICT)
             if self.eye_cascade is not None:
                 gray_face = cv2.cvtColor(face_roi, cv2.COLOR_BGR2GRAY)
                 eyes = self.eye_cascade.detectMultiScale(
@@ -243,22 +243,24 @@ class FaceRecognitionService:
                 if len(eyes) >= 1:
                     return True, ""
                 
-                # If DNN detected with high confidence, still accept
-                if face_data.get('confidence', 0) >= 0.7:
+                # Only accept without eyes if DNN detected with VERY high confidence
+                # This prevents covered faces / non-face objects from passing
+                if face_data.get('confidence', 0) >= 0.85 and face_data.get('method') == 'dnn':
+                    print(f"[FaceService] Warning: No eyes detected but DNN confidence is very high ({face_data['confidence']:.2f})")
                     return True, ""
                 
-                return False, "Human face required - no eyes detected. Ensure good lighting."
+                return False, "No clear face features detected - ensure face is uncovered with good lighting"
             
-            # If no eye cascade, accept based on detection confidence
-            if face_data.get('confidence', 0) >= 0.5:
+            # If no eye cascade available, require higher confidence
+            if face_data.get('confidence', 0) >= 0.7:
                 return True, ""
             
-            return False, "Face validation failed - please try again"
+            return False, "Face validation failed - please try again with clearer face visibility"
             
         except Exception as e:
             print(f"[FaceService] Face validation error: {e}")
-            # Accept if detection confidence was decent
-            if face_data.get('confidence', 0) >= 0.6:
+            # Only accept on error if detection confidence was very high
+            if face_data.get('confidence', 0) >= 0.8:
                 return True, ""
             return False, "Face validation failed - please try again"
     

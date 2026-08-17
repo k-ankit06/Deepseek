@@ -141,67 +141,98 @@ const CameraCapture = ({
 
       // For REGISTRATION: Try face detection, but don't block if AI service is down
       if (purpose === 'registration') {
-        let encoding = null
-        let faceDetected = false
+        let encoding = null;
+        let faceDetected = false;
+        let aiUnavailable = false;
 
         try {
           // Try AI face detection (best effort)
-          const detectResponse = await apiMethods.detectFaces(base64Image)
+          const detectResponse = await apiMethods.detectFaces(base64Image);
 
-          if (detectResponse.success && detectResponse.faces > 0) {
-            faceDetected = true
+          // Check if this was a fallback response (AI service was down)
+          if (detectResponse.fallback) {
+            // AI service is down - no real detection happened
+            aiUnavailable = true;
+            console.warn('AI service unavailable - fallback response received');
+            toast('⚠️ AI service unavailable - photo saved without face verification', {
+              icon: '⚠️',
+              duration: 4000,
+              style: { background: '#f59e0b', color: '#000' }
+            });
+          } else if (detectResponse.success && detectResponse.faces > 0) {
+            // Real face detected by AI
+            faceDetected = true;
             // Try to get encoding
             try {
-              const encodeResponse = await apiMethods.encodeFace(base64Image)
-              if (encodeResponse.success) {
-                encoding = encodeResponse.encoding
+              const encodeResponse = await apiMethods.encodeFace(base64Image);
+              if (encodeResponse.success && encodeResponse.encoding) {
+                encoding = encodeResponse.encoding;
               }
             } catch (encodeErr) {
-              console.warn('Face encoding failed (AI service issue):', encodeErr)
+              console.warn('Face encoding failed (AI service issue):', encodeErr);
             }
-          } else if (detectResponse.success && detectResponse.faces === 0) {
-            // AI responded but no face found - warn but still allow
-            toast.error('No face detected - please ensure your face is visible', { duration: 3000 })
           } else {
-            // Detection returned failure
-            toast.error(detectResponse.message || 'Face not clearly visible', { duration: 3000 })
+            // AI responded but no face found - REJECT
+            toast.error('❌ No human face detected - please show your face clearly and retake', { duration: 4000 });
           }
         } catch (aiError) {
-          // AI service is down (503/network error) - still allow photo capture
-          console.warn('AI face detection service unavailable:', aiError)
-          toast('⚠️ Face AI service unavailable - photo will be saved without face encoding', {
+          // Network error reaching AI service
+          aiUnavailable = true;
+          console.warn('AI face detection service unreachable:', aiError);
+          toast('⚠️ AI service unreachable - photo saved without face verification', {
             icon: '⚠️',
             duration: 4000,
             style: { background: '#f59e0b', color: '#000' }
-          })
+          });
         }
 
-        // Always save the photo for registration (even without face detection)
+        // Determine status based on what happened
+        let status, confidence;
+        if (faceDetected) {
+          status = 'detected';
+          confidence = 0.99;
+        } else if (aiUnavailable) {
+          status = 'ai_unavailable';
+          confidence = 0;
+        } else {
+          // AI said no face - don't save, let user retake
+          status = 'no_face';
+          confidence = 0;
+        }
+
         const faceData = {
           id: 1,
-          confidence: faceDetected ? 0.99 : 0.5,
-          status: faceDetected ? 'detected' : 'photo_only',
+          confidence: confidence,
+          status: status,
           encoding: encoding
-        }
+        };
 
-        setDetectedFaces([faceData])
+        setDetectedFaces([faceData]);
 
-        if (onCapture) {
-          onCapture({
-            image: { url: base64Image },
-            encoding: encoding,
-            faces: [faceData],
-            mode: recognitionMode,
-            timestamp: Date.now(),
-            purpose: 'registration'
-          })
+        // Only call onCapture if face was detected OR AI was unavailable (allow photo save)
+        if (faceDetected || aiUnavailable) {
+          if (onCapture) {
+            onCapture({
+              image: { url: base64Image },
+              encoding: encoding,
+              faces: [faceData],
+              mode: recognitionMode,
+              timestamp: Date.now(),
+              purpose: 'registration',
+              fallback: aiUnavailable
+            });
 
-          if (faceDetected && encoding) {
-            toast.success('✅ Face captured with AI encoding! Ready for registration.')
-          } else {
-            toast.success('📸 Photo captured! Ready for registration.')
+            if (faceDetected && encoding) {
+              toast.success('✅ Face captured with AI encoding! Ready for registration.');
+            } else if (faceDetected) {
+              toast.success('✅ Face detected! Photo captured.');
+            } else {
+              // AI unavailable - photo saved
+              toast.success('📸 Photo saved (AI verification pending).');
+            }
           }
         }
+        // If no_face: don't call onCapture, user needs to retake
       }
       // For ATTENDANCE: Face detection is required for matching
       else if (purpose === 'attendance') {
@@ -545,31 +576,92 @@ const CameraCapture = ({
         )}
 
         {/* Success Overlay for Registration AND Attendance fallback */}
-        {detectedFaces.length > 0 && (detectedFaces[0].status === 'detected' || detectedFaces[0].status === 'photo_only') && !isProcessing && (
+        {detectedFaces.length > 0 && detectedFaces[0].status === 'detected' && !isProcessing && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={`absolute inset-0 ${detectedFaces[0].status === 'detected' ? 'bg-green-900/80' : 'bg-blue-900/80'} flex items-center justify-center`}
+            className="absolute inset-0 bg-green-900/80 flex items-center justify-center"
           >
             <div className="text-center p-6 max-w-sm">
-              <div className={`w-16 h-16 rounded-full ${detectedFaces[0].status === 'detected' ? 'bg-green-500' : 'bg-blue-500'} flex items-center justify-center mx-auto mb-4`}>
+              <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-4">
                 <CheckCircle size={32} className="text-white" />
               </div>
-              <h3 className="text-white text-lg font-semibold mb-2">
-                {detectedFaces[0].status === 'detected' ? 'Face Captured Successfully!' : 'Photo Captured!'}
-              </h3>
-              <p className={`${detectedFaces[0].status === 'detected' ? 'text-green-200' : 'text-blue-200'} mb-4`}>
-                {detectedFaces[0].status === 'detected'
-                  ? 'Human face detected and encoding generated'
-                  : purpose === 'attendance'
-                    ? 'AI service unavailable - you can use manual attendance mode'
-                    : 'Photo saved - face encoding will be added when AI service is available'}
-              </p>
+              <h3 className="text-white text-lg font-semibold mb-2">Face Captured Successfully!</h3>
+              <p className="text-green-200 mb-4">Human face detected and verified by AI</p>
               <button
                 onClick={onClose}
-                className={`px-6 py-2 bg-white ${detectedFaces[0].status === 'detected' ? 'text-green-600' : 'text-blue-600'} rounded-lg font-medium hover:bg-gray-50 transition-colors`}
+                className="px-6 py-2 bg-white text-green-600 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               >
                 {purpose === 'attendance' ? 'Continue' : 'Continue Registration'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* AI Unavailable Overlay */}
+        {detectedFaces.length > 0 && detectedFaces[0].status === 'ai_unavailable' && !isProcessing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-amber-900/80 flex items-center justify-center"
+          >
+            <div className="text-center p-6 max-w-sm">
+              <div className="w-16 h-16 rounded-full bg-amber-500 flex items-center justify-center mx-auto mb-4">
+                <AlertCircle size={32} className="text-white" />
+              </div>
+              <h3 className="text-white text-lg font-semibold mb-2">Photo Saved</h3>
+              <p className="text-amber-200 mb-4">AI service unavailable — photo saved without face verification. Face encoding will be done when AI is back online.</p>
+              <button
+                onClick={onClose}
+                className="px-6 py-2 bg-white text-amber-600 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              >
+                Continue Registration
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* No Face Detected Overlay */}
+        {detectedFaces.length > 0 && detectedFaces[0].status === 'no_face' && !isProcessing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-red-900/80 flex items-center justify-center"
+          >
+            <div className="text-center p-6 max-w-sm">
+              <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center mx-auto mb-4">
+                <XCircle size={32} className="text-white" />
+              </div>
+              <h3 className="text-white text-lg font-semibold mb-2">No Human Face Detected</h3>
+              <p className="text-red-200 mb-4">AI could not detect a clear human face. Please ensure your face is fully visible, uncovered, and well-lit.</p>
+              <button
+                onClick={() => { setDetectedFaces([]); setFaceValidationError(null); }}
+                className="px-6 py-2 bg-white text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors"
+              >
+                Retake Photo
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Attendance photo_only fallback overlay */}
+        {detectedFaces.length > 0 && detectedFaces[0].status === 'photo_only' && !isProcessing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-blue-900/80 flex items-center justify-center"
+          >
+            <div className="text-center p-6 max-w-sm">
+              <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle size={32} className="text-white" />
+              </div>
+              <h3 className="text-white text-lg font-semibold mb-2">Photo Captured</h3>
+              <p className="text-blue-200 mb-4">AI service unavailable — you can use manual attendance mode</p>
+              <button
+                onClick={onClose}
+                className="px-6 py-2 bg-white text-blue-600 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              >
+                Continue
               </button>
             </div>
           </motion.div>

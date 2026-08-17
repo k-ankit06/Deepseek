@@ -221,37 +221,33 @@ const StudentRegistrationPage = () => {
 
     setShowCamera(false);
     setPhotoPreview(imageUrl);
-    setIsDetectingFace(true);
-    setFaceDetected(null);
     setFaceError('');
 
-    try {
-      // Try AI face detection (best effort - don't block if unavailable)
-      const response = await apiMethods.detectFaces(imageUrl);
+    // CameraCapture already did face detection — just read the result
+    const faceStatus = data?.faces?.[0]?.status;
+    const isFallback = data?.fallback === true;
 
-      if (response.success && response.faces > 0) {
-        setFaceDetected(true);
-        setFaceError('');
-        toast.success('✅ Human face detected successfully!');
-      } else {
-        // AI responded but no face found - still save photo
-        setFaceDetected(true); // Allow registration to proceed
-        const errorMsg = response.message || 'Face not clearly detected';
-        setFaceError(errorMsg);
-        toast('⚠️ ' + errorMsg + ' - photo will still be saved', { icon: '⚠️', duration: 3000 });
-      }
-    } catch (error) {
-      console.warn('Face detection service unavailable:', error);
-      // AI service is down - still allow photo to be saved
-      setFaceDetected(true); // Allow registration to proceed
-      setFaceError('Face detection service unavailable - photo saved without AI verification');
-      toast('⚠️ AI service unavailable - photo saved without face verification', {
+    if (faceStatus === 'detected') {
+      // AI confirmed real human face
+      setFaceDetected(true);
+      setIsDetectingFace(false);
+      toast.success('✅ Human face detected successfully!');
+    } else if (faceStatus === 'ai_unavailable' || isFallback) {
+      // AI service was down — photo saved without verification
+      setFaceDetected(null); // null = unknown state (not true, not false)
+      setIsDetectingFace(false);
+      setFaceError('AI service unavailable — photo saved without face verification');
+      toast('⚠️ AI unavailable — photo saved, face verification pending', {
         icon: '⚠️',
         duration: 4000,
         style: { background: '#f59e0b', color: '#000' }
       });
-    } finally {
+    } else {
+      // No face detected or no data — should not normally reach here
+      // since CameraCapture blocks onCapture for 'no_face' status
+      setFaceDetected(false);
       setIsDetectingFace(false);
+      setFaceError('No face detected in the photo');
     }
   };
 
@@ -304,7 +300,7 @@ const StudentRegistrationPage = () => {
             <h3 className="font-bold text-gray-800 mb-4 text-center">Student Photo *</h3>
 
             <div className="flex flex-col items-center">
-              <div className={`w-48 h-48 rounded-xl bg-gray-100 flex items-center justify-center mb-4 overflow-hidden border-2 ${errors.photo ? 'border-red-500' : faceDetected === true ? 'border-green-500' : faceDetected === false ? 'border-red-500' : 'border-gray-200'}`}>
+              <div className={`w-48 h-48 rounded-xl bg-gray-100 flex items-center justify-center mb-4 overflow-hidden border-2 ${errors.photo ? 'border-red-500' : faceDetected === true ? 'border-green-500' : faceDetected === false ? 'border-red-500' : (faceDetected === null && photoPreview) ? 'border-amber-500' : 'border-gray-200'}`}>
                 {photoPreview ? (
                   <img src={photoPreview} alt="Student" className="w-full h-full object-cover" />
                 ) : (
@@ -323,6 +319,15 @@ const StudentRegistrationPage = () => {
                 <div className="flex items-center text-green-600 mb-2">
                   <CheckCircle className="mr-2" size={16} />
                   <span className="text-sm font-medium">Human face detected ✓</span>
+                </div>
+              )}
+              {faceDetected === null && !isDetectingFace && faceError && photoPreview && (
+                <div className="flex flex-col items-center mb-2">
+                  <div className="flex items-center text-amber-600">
+                    <AlertCircle className="mr-2" size={16} />
+                    <span className="text-sm font-medium">AI unavailable ⚠️</span>
+                  </div>
+                  <span className="text-xs text-amber-500 mt-1">{faceError}</span>
                 </div>
               )}
               {faceDetected === false && !isDetectingFace && (

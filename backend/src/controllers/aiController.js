@@ -40,14 +40,14 @@ const detectFaces = async (req, res) => {
       });
     } catch (aiError) {
       console.error('AI service error:', aiError.message);
-      // If AI service is down, return graceful fallback instead of hard 503
-      // This allows registration to proceed with photo-only mode
+      // AI service is down - return fallback: true so frontend knows
+      // NO real detection happened. Don't fake success.
       return res.status(200).json({
-        success: true,
-        faces: 1,
-        message: 'Face detection skipped (AI service temporarily unavailable) - photo accepted',
+        success: false,
+        faces: 0,
+        message: 'AI face detection service temporarily unavailable',
         fallback: true,
-        errors: [],
+        errors: ['AI service unreachable'],
       });
     }
   } catch (error) {

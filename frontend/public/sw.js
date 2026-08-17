@@ -61,6 +61,12 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
+    // Skip non-http(s) requests (chrome-extension://, moz-extension://, etc.)
+    // These cannot be cached and cause TypeError
+    if (!url.protocol.startsWith('http')) {
+        return;
+    }
+
     // Skip non-GET requests
     if (request.method !== 'GET') {
         return;
