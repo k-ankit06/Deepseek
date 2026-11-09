@@ -103,52 +103,112 @@ class FaceRecognitionService:
         self.dnn_net = cv2.dnn.readNetFromCaffe(proto_path, model_path)
         print("[FaceService] DNN model loaded from disk")
     
+    # @staticmethod
+    # def decode_base64_image(base64_string: str) -> Optional[np.ndarray]:
+    #     """Decode base64 string to OpenCV image"""
+    #     try:
+    #         if 'base64,' in base64_string:
+    #             base64_string = base64_string.split('base64,')[1]
+            
+    #         image_bytes = base64.b64decode(base64_string)
+    #         nparr = np.frombuffer(image_bytes, np.uint8)
+    #         image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    #         return image
+    #     except Exception as e:
+    #         print(f"[FaceService] Error decoding image: {e}")
+    #         return None
     @staticmethod
     def decode_base64_image(base64_string: str) -> Optional[np.ndarray]:
         """Decode base64 string to OpenCV image"""
         try:
+            # Remove data URI prefix if present
             if 'base64,' in base64_string:
-                base64_string = base64_string.split('base64,')[1]
-            
-            image_bytes = base64.b64decode(base64_string)
+                base64_string = base64_string.split('base64,', 1)[1]
+
+            # Remove whitespace
+            base64_string = ''.join(base64_string.split())
+
+            # Decode Base64
+            image_bytes = base64.b64decode(base64_string, validate=True)
+
+            print(f"[DEBUG] Decoded image size: {len(image_bytes)} bytes")
+            print(f"[DEBUG] Image signature: {image_bytes[:10].hex()}")
+
+            # Convert bytes to NumPy array
             nparr = np.frombuffer(image_bytes, np.uint8)
+
+            # Decode using OpenCV
             image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+            if image is None:
+                print("[ERROR] OpenCV could not decode the image")
+                return None
+
+            print(f"[SUCCESS] Image decoded: {image.shape}")
+
             return image
+
         except Exception as e:
             print(f"[FaceService] Error decoding image: {e}")
             return None
     
-    def detect_faces(self, image: np.ndarray) -> Tuple[List[Dict], str]:
-        """
-        Detect faces using OpenCV DNN or Haar Cascade
+
+
+    # def detect_faces(self, image: np.ndarray) -> Tuple[List[Dict], str]:
+    #     """
+    #     Detect faces using OpenCV DNN or Haar Cascade
         
-        Returns:
-            (face_data_list, error_message)
-        """
+    #     Returns:
+    #         (face_data_list, error_message)
+    #     """
+    #     if image is None:
+    #         return [], "Invalid image"
+        
+    #     h, w = image.shape[:2]
+    #     faces = []
+        
+    #     # Method 1: DNN-based detection (more accurate)
+    #     if self.dnn_net is not None:
+    #         faces = self._detect_dnn(image, h, w)
+        
+    #     # Method 2: Haar Cascade fallback
+    #     if len(faces) == 0 and self.haar_cascade is not None:
+    #         faces = self._detect_haar(image, h, w)
+        
+    #     # No detector available - accept the photo
+    #     if self.dnn_net is None and self.haar_cascade is None:
+    #         return [{'box': [0, 0, w, h], 'confidence': 0.5, 'method': 'none'}], ""
+        
+    #     if len(faces) == 0:
+    #         return [], "No face detected - please position your face in the camera"
+        
+    #     if len(faces) > 1:
+    #         return [], f"Multiple faces detected ({len(faces)}) - only one person allowed"
+        
+    #     return faces, ""
+    def detect_faces(self, image: np.ndarray, allow_multiple=False) -> Tuple[List[Dict], str]:
+
         if image is None:
             return [], "Invalid image"
-        
+
         h, w = image.shape[:2]
         faces = []
-        
-        # Method 1: DNN-based detection (more accurate)
+
         if self.dnn_net is not None:
             faces = self._detect_dnn(image, h, w)
-        
-        # Method 2: Haar Cascade fallback
+
         if len(faces) == 0 and self.haar_cascade is not None:
             faces = self._detect_haar(image, h, w)
-        
-        # No detector available - accept the photo
+
         if self.dnn_net is None and self.haar_cascade is None:
-            return [{'box': [0, 0, w, h], 'confidence': 0.5, 'method': 'none'}], ""
-        
+            return [], "No face detector available"
+
         if len(faces) == 0:
-            return [], "No face detected - please position your face in the camera"
-        
-        if len(faces) > 1:
-            return [], f"Multiple faces detected ({len(faces)}) - only one person allowed"
-        
+            return [], "No face detected"
+
+        if len(faces) > 1 and not allow_multiple:
+            return [], f"Multiple faces detected ({len(faces)})"
+
         return faces, ""
     
     def _detect_dnn(self, image: np.ndarray, h: int, w: int) -> List[Dict]:
@@ -433,65 +493,146 @@ class FaceRecognitionService:
         
         return result
     
+    # def process_attendance_image(self, base64_image: str, student_encodings: Dict[str, Dict]) -> Dict:
+    #     """Process image for attendance marking"""
+    #     result = {
+    #         'success': False,
+    #         'recognized': [],
+    #         'errors': []
+    #     }
+        
+    #     image = self.decode_base64_image(base64_image)
+    #     if image is None:
+    #         result['errors'].append("Invalid image format")
+    #         return result
+        
+    #     face_data_list, error = self.detect_faces(image)
+    #     if error:
+    #         result['errors'].append(error)
+    #         return result
+        
+    #     face_data = face_data_list[0]
+        
+    #     is_human, error = self.is_human_face(image, face_data)
+    #     if not is_human:
+    #         result['errors'].append(error)
+    #         return result
+        
+    #     captured_encoding = self.generate_face_encoding(image, face_data)
+    #     if captured_encoding is None:
+    #         result['errors'].append("Failed to generate face encoding")
+    #         return result
+        
+    #     print(f"[Recognition] Comparing with {len(student_encodings)} stored encodings...")
+        
+    #     best_match = None
+    #     best_confidence = 0.0
+        
+    #     for student_id, student_data in student_encodings.items():
+    #         stored_encoding = student_data.get('encoding')
+    #         if not stored_encoding:
+    #             continue
+            
+    #         confidence, is_match = self.match_face_encoding(stored_encoding, captured_encoding)
+            
+    #         print(f"[Recognition] Student {student_id}: confidence={confidence:.2f}%, match={is_match}")
+            
+    #         if is_match and confidence > best_confidence:
+    #             best_confidence = confidence
+    #             best_match = {
+    #                 'studentId': student_id,
+    #                 'confidence': confidence,
+    #                 'name': student_data.get('name', 'Unknown'),
+    #                 'rollNumber': student_data.get('rollNumber', '')
+    #             }
+        
+    #     if best_match:
+    #         result['success'] = True
+    #         result['recognized'].append(best_match)
+    #         print(f"[Recognition] ✅ Match found: {best_match['name']} ({best_match['confidence']:.2f}%)")
+    #     else:
+    #         result['errors'].append("No matching student found - face not registered or confidence too low")
+    #         print(f"[Recognition] ❌ No match found. Best confidence was {best_confidence:.2f}%")
+        
+    #     return result
     def process_attendance_image(self, base64_image: str, student_encodings: Dict[str, Dict]) -> Dict:
-        """Process image for attendance marking"""
+
         result = {
             'success': False,
             'recognized': [],
             'errors': []
         }
-        
+
         image = self.decode_base64_image(base64_image)
+
         if image is None:
             result['errors'].append("Invalid image format")
             return result
-        
-        face_data_list, error = self.detect_faces(image)
+
+        # Allow multiple faces for classroom attendance
+        face_data_list, error = self.detect_faces(
+            image,
+            allow_multiple=True
+        )
+
         if error:
             result['errors'].append(error)
             return result
-        
-        face_data = face_data_list[0]
-        
-        is_human, error = self.is_human_face(image, face_data)
-        if not is_human:
-            result['errors'].append(error)
-            return result
-        
-        captured_encoding = self.generate_face_encoding(image, face_data)
-        if captured_encoding is None:
-            result['errors'].append("Failed to generate face encoding")
-            return result
-        
-        print(f"[Recognition] Comparing with {len(student_encodings)} stored encodings...")
-        
-        best_match = None
-        best_confidence = 0.0
-        
-        for student_id, student_data in student_encodings.items():
-            stored_encoding = student_data.get('encoding')
-            if not stored_encoding:
+
+        print(f"[Recognition] Detected {len(face_data_list)} faces")
+
+        recognized_ids = set()
+
+        for face_data in face_data_list:
+
+            is_human, error = self.is_human_face(image, face_data)
+
+            if not is_human:
                 continue
-            
-            confidence, is_match = self.match_face_encoding(stored_encoding, captured_encoding)
-            
-            print(f"[Recognition] Student {student_id}: confidence={confidence:.2f}%, match={is_match}")
-            
-            if is_match and confidence > best_confidence:
-                best_confidence = confidence
-                best_match = {
-                    'studentId': student_id,
-                    'confidence': confidence,
-                    'name': student_data.get('name', 'Unknown'),
-                    'rollNumber': student_data.get('rollNumber', '')
-                }
-        
-        if best_match:
-            result['success'] = True
-            result['recognized'].append(best_match)
-            print(f"[Recognition] ✅ Match found: {best_match['name']} ({best_match['confidence']:.2f}%)")
-        else:
-            result['errors'].append("No matching student found - face not registered or confidence too low")
-            print(f"[Recognition] ❌ No match found. Best confidence was {best_confidence:.2f}%")
-        
+
+            captured_encoding = self.generate_face_encoding(image, face_data)
+
+            if captured_encoding is None:
+                continue
+
+            best_match = None
+            best_confidence = 0.0
+
+            for student_id, student_data in student_encodings.items():
+
+                if student_id in recognized_ids:
+                    continue
+
+                stored_encoding = student_data.get('encoding')
+
+                if not stored_encoding:
+                    continue
+
+                confidence, is_match = self.match_face_encoding(
+                    stored_encoding,
+                    captured_encoding
+                )
+
+                if is_match and confidence > best_confidence:
+                    best_confidence = confidence
+
+                    best_match = {
+                        'studentId': student_id,
+                        'confidence': confidence,
+                        'name': student_data.get('name', 'Unknown'),
+                        'rollNumber': student_data.get('rollNumber', '')
+                    }
+
+            if best_match:
+                recognized_ids.add(best_match['studentId'])
+                result['recognized'].append(best_match)
+
+        # Request was processed successfully, even if no student matched
+        result['success'] = True
+
+        print(
+            f"[Recognition] Successfully recognized "
+            f"{len(result['recognized'])} student(s)"
+        )
+
         return result

@@ -3,7 +3,7 @@ const Class = require('../models/Class');
 const School = require('../models/School');
 const FaceEncoding = require('../models/FaceEncoding');
 const mongoose = require('mongoose');
-
+const axios = require("axios");
 // @desc    Get all students with filters
 // @route   GET /api/v1/students
 // @access  Private
@@ -569,41 +569,75 @@ const searchStudents = async (req, res) => {
 // @desc    Register student face
 // @route   POST /api/students/:id/face
 // @access  Private/Teacher
+
+
 const registerStudentFace = async (req, res) => {
   try {
-    const { id } = req.params;
     const { imageData } = req.body;
-    const schoolId = req.user.school;
 
-    // Find student
+    if (!imageData) {
+      return res.status(400).json({
+        success: false,
+        message: "Face image is required",
+      });
+    }
+
     const student = await Student.findOne({
-      _id: id,
-      school: schoolId,
+      _id: req.params.id,
+      school: req.user.school,
+      isActive: true,
     });
 
     if (!student) {
       return res.status(404).json({
         success: false,
-        message: 'Student not found',
+        message: "Student not found",
       });
     }
 
-    // In a real implementation, this would call the AI service to process the face
-    // For now, we'll just mark the student as having face registered
+    const aiResponse = await axios.post(
+      `${process.env.AI_SERVICE_URL}/api/register-face`,
+      { image: imageData },
+      { timeout: 60000 }
+    );
+
+    if (!aiResponse.data.success || !aiResponse.data.encoding) {
+      return res.status(400).json({
+        success: false,
+        message: aiResponse.data.error || "Face registration failed",
+      });
+    }
+
+    const encoding = aiResponse.data.encoding;
+
+    if (encoding.length !== 512) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid face encoding dimensions",
+      });
+    }
+
+    student.faceEncoding = encoding;
     student.faceRegistered = true;
     student.lastFaceUpdate = new Date();
+
     await student.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: 'Student face registered successfully',
-      data: student,
+      message: "Student face registered successfully",
+      studentId: student._id,
     });
+
   } catch (error) {
-    console.error('Register student face error:', error);
-    res.status(500).json({
+    console.error(
+      "Face registration error:",
+      error.response?.data || error.message
+    );
+
+    return res.status(500).json({
       success: false,
-      message: 'Server error registering student face',
+      message: "Face registration failed",
     });
   }
 };
